@@ -20,7 +20,7 @@ import { generateSuggestions, getFallbackSuggestions } from "./suggest.js";
 // [NPC SHAPES FARM START]
 import { handleTurn } from "./npcHandler.js";
 import { load as loadNpcState, save as saveNpcState, reset as resetNpcState } from "./memoryStore.js";
-import { handlePlayerFarmAction } from "./gameEngine.js";
+import { applyPlayerEvent } from "./gameEngine.js";
 // [NPC SHAPES FARM END]
 
 const app = express();
@@ -46,6 +46,7 @@ app.post("/api/npc/chat", async (req, res) => {
   res.json(result);
 });
 
+// Farm buttons in the UI call this — uses the new applyPlayerEvent pipeline
 app.post("/api/npc/farm-action", (req, res) => {
   const { sessionId, action, params } = req.body || {};
   if (!sessionId || !action) {
@@ -53,9 +54,22 @@ app.post("/api/npc/farm-action", (req, res) => {
   }
 
   const state = loadNpcState(sessionId);
-  const result = handlePlayerFarmAction(state, action, params);
+  const result = applyPlayerEvent(state, { type: action, ...params });
   saveNpcState(sessionId, state);
   res.json({ ...result, state });
+});
+
+// Alias used by the client farm panel
+app.post("/api/game/event", (req, res) => {
+  const { sessionId, event } = req.body || {};
+  if (!sessionId || !event?.type) {
+    return res.status(400).json({ error: "sessionId and event.type required" });
+  }
+
+  const state = loadNpcState(sessionId);
+  const out = applyPlayerEvent(state, event);
+  saveNpcState(sessionId, state);
+  res.json({ ...out, state });
 });
 
 app.post("/api/npc/reset", (req, res) => {

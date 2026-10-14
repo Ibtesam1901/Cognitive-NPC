@@ -1,450 +1,434 @@
-/**
- * Game Engine: Single source of truth and rule validator.
- * Principle: The LLM proposes, the game engine decides and enforces.
- */
+// gameEngine.js
+// The LLM PROPOSES, this engine DECIDES.
+// Every action Raghu suggests is validated against the rules below. Nothing the
+// model says can break the game: unknown actions, bad numbers, missing
+// prerequisites and cheating attempts are rejected with a reason.
+//
+// No dependencies. Functions mutate the state object you pass in; call
+// structuredClone(state) first if you want atomic turns.
 
-export const QUEST_CATALOG = {
-  first_harvest: {
-    id: "first_harvest",
-    title: "First Harvest",
-    desc: "Plant wheat in plot 1 and harvest it.",
-    maxSteps: 2,
-    reward: { gold: 50, seeds: 2, trust: 2 },
-  },
-  dawn_watering: {
-    id: "dawn_watering",
-    title: "Dawn Watering",
-    desc: "Water all planted crops before noon.",
-    maxSteps: 1,
-    reward: { gold: 35, trust: 2 },
-  },
-  village_prayer: {
-    id: "village_prayer",
-    title: "Village Rain Prayer",
-    desc: "Bring an offering to the village shrine for rain.",
-    maxSteps: 1,
-    reward: { weather: "rain", trust: 3, gold: 40 },
-  },
+import { QUESTS } from "./questCatalog.js";
+
+export const EMOTIONS = ["happy", "neutral", "annoyed", "worried", "proud"];
+export const GROWTH_DAYS = 2; // watered days needed before a crop is ready
+export const BASE_PRICE = 10; // gold per wheat before the price multiplier
+
+export const LIMITS = {
+  maxActionsPerTurn: 3,
+  maxActiveQuests: 2,
+  giftsPerDay: 3,
+  trustGainPerDay: 3,
+  weatherChangesPerDay: 1,
+  flowersPerDay: 3,
+  maxFacts: 20,
+  recentTurns: 8,
+  summaryEvery: 8,
+  replyChars: 400,
+  itemCap: 20,
 };
 
+const GIVABLE_ITEMS = ["seeds", "water_can", "fertilizer"];
+const CROPS = ["wheat"];
+const WEATHERS = ["clear", "rain"];
+
+class RuleError extends Error {}
+const fail = (msg) => {
+  throw new RuleError(msg);
+};
+
+const toInt = (v, fallback = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+};
+export const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+
+// ---------------------------------------------------------------- state
 
 export function createInitialState() {
   return {
     day: 1,
-    weather: "clear", // clear | rain | drought | overcast
+    time: 8, // hour of day, 0-23
+    weather: "clear",
     gold: 100,
-    plots: [
-      { id: 1, unlocked: true, crop: null, stage: 0, watered: false },
-      { id: 2, unlocked: true, crop: null, stage: 0, watered: false },
-      { id: 3, unlocked: false, crop: null, stage: 0, watered: false },
-      { id: 4, unlocked: false, crop: null, stage: 0, watered: false },
-    ],
-    inventory: {
-      seeds: 3,
-      wheat: 0,
-      tools: ["hoe", "watering_can"],
+    plots: [1, 2, 3].map((id) => ({
+      id,
+      locked: id !== 1,
+      crop: null,
+      growth: 0,
+      watered: false,
+      wateredAt: null, // hour of manual watering; null if rain or unwatered
+    })),
+    inventory: { seeds: 3, water_can: 1, fertilizer: 0, flowers: 0, wheat: 0 },
+    prices: { wheat: 1.0 },
+    flags: {
+      harvestedWheat: false,
+      shrineOffered: false,
+      canChangeWeather: false,
+      giftsToday: 0,
+      trustGainedToday: 0,
+      weatherChangesToday: 0,
+      flowersToday: 0,
     },
-    market: {
-      wheat_price: 25,
-      seed_cost: 10,
-    },
-    quests: [
-      {
-        id: "first_harvest",
-        title: QUEST_CATALOG.first_harvest.title,
-        desc: QUEST_CATALOG.first_harvest.desc,
-        status: "active", // active | completed
-        step: 1,
-        maxSteps: 2,
-      },
-    ],
-    npc: {
-      name: "Raghu",
-      traits: ["proud", "warm", "stubborn"],
-      mood: "neutral", // happy | neutral | annoyed | worried
-      trust: 0, // -10..10
-    },
-    memory: {
-      facts: [], // durable things the player said/did (max 20)
-      summary: "", // rolling summary of older conversation
-      recent: [], // last 6-8 turns: { role, content, emotion, time }
-    },
+    quests: [], // { id, status: "active" | "done", step }
+    npc: { name: "Raghu", mood: "neutral", trust: 0 },
+    memory: { facts: [], summary: "", recent: [], turnsSinceSummary: 0 },
   };
 }
 
-export function clamp(val, min, max) {
-  return Math.max(min, Math.min(max, val));
+const getPlot = (state, id) =>
+  state.plots.find((p) => p.id === toInt(id)) ?? fail("no such plot");
+const addItem = (state, item, qty) => {
+  state.inventory[item] = clamp(
+    (state.inventory[item] ?? 0) + qty,
+    0,
+    LIMITS.itemCap
+  );
+};
+const hasDoneQuest = (state) => state.quests.some((q) => q.status === "done");
+
+// ---------------------------------------------------------------- trust
+
+function addTrust(state, delta) {
+  const before = state.npc.trust;
+  state.npc.trust = clamp(before + delta, -10, 10);
+  return state.npc.trust - before;
 }
 
-/**
- * Validates and applies actions proposed by the LLM against the hard game rules.
- * Returns { applied: Array, rejected: Array }
- */
-export function applyActions(state, proposedActions) {
-  const applied = [];
-  const rejected = [];
-
-  if (!Array.isArray(proposedActions)) {
-    return { applied, rejected };
+// Model-driven trust changes: positive gains are capped per day so players
+// cannot farm trust by spamming compliments. Negative changes are never capped.
+function applyTrustDelta(state, delta) {
+  if (delta > 0) {
+    const room = Math.max(0, LIMITS.trustGainPerDay - state.flags.trustGainedToday);
+    const gain = addTrust(state, Math.min(delta, room));
+    state.flags.trustGainedToday += gain;
+    return gain;
   }
+  return addTrust(state, delta);
+}
 
-  for (const action of proposedActions) {
-    if (!action || !action.type) continue;
+// ---------------------------------------------------------------- quests
 
-    switch (action.type) {
-      case "OFFER_QUEST": {
-        const questDef = QUEST_CATALOG[action.id];
-        if (!questDef) {
-          rejected.push({ action, reason: `Unknown quest ID: ${action.id}` });
-          break;
-        }
-        const existing = state.quests.find((q) => q.id === action.id);
-        if (existing) {
-          rejected.push({ action, reason: `Quest '${questDef.title}' is already in journal` });
-          break;
-        }
-        state.quests.push({
-          id: questDef.id,
-          title: questDef.title,
-          desc: questDef.desc,
-          status: "active",
-          step: 1,
-          maxSteps: questDef.maxSteps,
-        });
-        applied.push({
-          type: "OFFER_QUEST",
-          id: questDef.id,
-          title: questDef.title,
-          message: `Raghu gave you a new quest: ${questDef.title}!`,
-        });
-        break;
-      }
+function completeQuest(state, quest, entry) {
+  entry.status = "done";
+  const r = quest.reward ?? {};
+  const parts = [];
+  if (r.gold) {
+    state.gold += r.gold;
+    parts.push(`+${r.gold} gold`);
+  }
+  for (const [item, qty] of Object.entries(r.items ?? {})) {
+    addItem(state, item, qty);
+    parts.push(`+${qty} ${item}`);
+  }
+  if (r.trust) addTrust(state, r.trust);
+  if (r.flag) state.flags[r.flag] = true;
+  return `Quest complete: ${quest.title}${parts.length ? ` (${parts.join(", ")})` : ""}`;
+}
 
-      case "ADVANCE_QUEST": {
-        const quest = state.quests.find((q) => q.id === action.id && q.status === "active");
-        if (!quest) {
-          rejected.push({ action, reason: `Active quest '${action.id}' not found in journal` });
-          break;
-        }
+function advanceOne(state, quest, entry) {
+  const finished = quest.steps[entry.step].desc;
+  entry.step += 1;
+  if (entry.step >= quest.steps.length) return completeQuest(state, quest, entry);
+  return `${quest.title}: "${finished}" done. Next: ${quest.steps[entry.step].desc}`;
+}
 
-        // Verify condition
-        let conditionMet = true;
-        if (quest.id === "first_harvest") {
-          // Check if at least one plot has a planted or watered crop
-          const hasCrop = state.plots.some((p) => p.unlocked && p.crop !== null);
-          conditionMet = hasCrop;
-        } else if (quest.id === "dawn_watering") {
-          const allUnlockedWatered = state.plots
-            .filter((p) => p.unlocked && p.crop !== null)
-            .every((p) => p.watered);
-          conditionMet = allUnlockedWatered;
-        } else if (quest.id === "bountiful_wheat") {
-          conditionMet = (state.inventory.wheat || 0) >= quest.step;
-        }
-
-        if (!conditionMet) {
-          rejected.push({
-            action,
-            reason: `Objective conditions for '${quest.title}' have not been completed yet`,
-          });
-          break;
-        }
-
-        quest.step += 1;
-        if (quest.step > quest.maxSteps) {
-          quest.status = "completed";
-          // Give quest rewards
-          const def = QUEST_CATALOG[quest.id];
-          if (def && def.reward) {
-            if (def.reward.gold) state.gold += def.reward.gold;
-            if (def.reward.seeds) state.inventory.seeds = (state.inventory.seeds || 0) + def.reward.seeds;
-            if (def.reward.trust) state.npc.trust = clamp(state.npc.trust + def.reward.trust, -10, 10);
-            if (def.reward.weather) state.weather = def.reward.weather;
-          }
-          applied.push({
-            type: "ADVANCE_QUEST",
-            id: quest.id,
-            completed: true,
-            title: quest.title,
-            message: `Completed Quest: ${quest.title}! Rewards granted.`,
-          });
-        } else {
-          applied.push({
-            type: "ADVANCE_QUEST",
-            id: quest.id,
-            completed: false,
-            step: quest.step,
-            message: `Advanced Quest: ${quest.title} (Step ${quest.step}/${quest.maxSteps})`,
-          });
-        }
-        break;
-      }
-
-      case "GIVE_ITEM": {
-        const item = action.item;
-        const requestedQty = parseInt(action.qty, 10) || 1;
-        // Condition: Only if trust >= 2
-        if (state.npc.trust < 2) {
-          rejected.push({
-            action,
-            reason: `Trust too low (requires trust ≥ 2, current trust: ${state.npc.trust}). Raghu only shares tools and supplies with helpers he trusts.`,
-          });
-          break;
-        }
-
-        const safeQty = Math.min(3, Math.max(1, requestedQty));
-        if (item === "seeds") {
-          state.inventory.seeds = (state.inventory.seeds || 0) + safeQty;
-          applied.push({
-            type: "GIVE_ITEM",
-            item: "seeds",
-            qty: safeQty,
-            message: `Raghu handed you ${safeQty}x wheat seeds.`,
-          });
-        } else if (item === "water_can" || item === "fertilizer") {
-          if (!state.inventory.tools.includes(item)) {
-            state.inventory.tools.push(item);
-          }
-          applied.push({
-            type: "GIVE_ITEM",
-            item,
-            qty: 1,
-            message: `Raghu gave you his trusted ${item.replace("_", " ")}.`,
-          });
-        } else {
-          rejected.push({ action, reason: `Item '${item}' is not grantable by Raghu.` });
-        }
-        break;
-      }
-
-      case "UNLOCK_PLOT": {
-        const plotId = parseInt(action.id, 10);
-        const plot = state.plots.find((p) => p.id === plotId);
-        if (!plot) {
-          rejected.push({ action, reason: `Plot ${plotId} does not exist.` });
-          break;
-        }
-        if (plot.unlocked) {
-          rejected.push({ action, reason: `Plot ${plotId} is already unlocked.` });
-          break;
-        }
-        // Condition: Only if trust >= 4 and the player has completed at least one quest
-        if (state.npc.trust < 4) {
-          rejected.push({
-            action,
-            reason: `Trust too low (requires trust ≥ 4, current trust: ${state.npc.trust}). Raghu withholds his ancestral land.`,
-          });
-          break;
-        }
-        const hasCompletedQuest = state.quests.some((q) => q.status === "completed");
-        if (!hasCompletedQuest) {
-          rejected.push({
-            action,
-            reason: `Must complete at least one farming quest before Raghu unlocks more land.`,
-          });
-          break;
-        }
-
-        plot.unlocked = true;
-        applied.push({
-          type: "UNLOCK_PLOT",
-          id: plotId,
-          message: `🌾 Raghu unlocked Plot #${plotId} for your care!`,
-        });
-        break;
-      }
-
-      case "SET_PRICE": {
-        const mult = clamp(parseFloat(action.mult) || 1.0, 0.8, 1.3);
-        state.market.wheat_price = Math.round(25 * mult);
-        applied.push({
-          type: "SET_PRICE",
-          crop: action.crop || "wheat",
-          mult,
-          newPrice: state.market.wheat_price,
-          message: `Market wheat price adjusted to ${state.market.wheat_price} gold (${mult}x).`,
-        });
-        break;
-      }
-
-      case "CHANGE_WEATHER": {
-        const validWeathers = ["clear", "rain"];
-        const w = String(action.weather || action.w || "clear").toLowerCase();
-        if (!validWeathers.includes(w)) {
-          rejected.push({ action, reason: `Invalid weather type: ${w}` });
-          break;
-        }
-        // Condition: Only if the player completed the quest "village_prayer"
-        const prayerCompleted = state.quests.some(
-          (q) => q.id === "village_prayer" && q.status === "completed"
-        );
-        if (!prayerCompleted) {
-          rejected.push({
-            action,
-            reason: `Weather shift refused. Player must first complete the 'village_prayer' quest at the village shrine.`,
-          });
-          break;
-        }
-        state.weather = w;
-        if (w === "rain") {
-          state.plots.forEach((p) => {
-            if (p.unlocked && p.crop) p.watered = true;
-          });
-        }
-        applied.push({
-          type: "CHANGE_WEATHER",
-          weather: w,
-          message: `Atmospheric shift: Weather changed to ${w.toUpperCase()}!`,
-        });
-        break;
-      }
-
-
-      default:
-        rejected.push({ action, reason: `Unknown action type: ${action.type}` });
+// Advances every active quest whose current step is satisfied by the world
+// (steps marked needsNpc wait for Raghu). Call after any state change.
+export function autoAdvanceQuests(state) {
+  const events = [];
+  for (const entry of state.quests) {
+    const quest = QUESTS[entry.id];
+    while (entry.status === "active") {
+      const step = quest.steps[entry.step];
+      if (step.needsNpc || !step.check(state)) break;
+      events.push({ type: "QUEST_PROGRESS", id: entry.id, text: advanceOne(state, quest, entry) });
     }
   }
+  return events;
+}
 
+// ---------------------------------------------------------------- NPC actions
+
+const npcActions = {
+  OFFER_QUEST(state, a) {
+    const quest = QUESTS[a.id] ?? fail("unknown quest");
+    if (state.quests.some((e) => e.id === quest.id)) fail("quest already offered");
+    if (state.npc.trust < quest.minTrust) fail("trust too low for this quest");
+    if (!quest.requires.every((id) => state.quests.some((e) => e.id === id && e.status === "done")))
+      fail("prerequisite quest not completed");
+    if (state.quests.filter((e) => e.status === "active").length >= LIMITS.maxActiveQuests)
+      fail("too many active quests");
+    state.quests.push({ id: quest.id, status: "active", step: 0 });
+    return `Quest offered: ${quest.title}`;
+  },
+
+  ADVANCE_QUEST(state, a) {
+    const entry = state.quests.find((e) => e.id === a.id && e.status === "active") ?? fail("quest not active");
+    const quest = QUESTS[entry.id];
+    if (!quest.steps[entry.step].check(state)) fail("step condition not met");
+    return advanceOne(state, quest, entry);
+  },
+
+  GIVE_ITEM(state, a) {
+    if (!GIVABLE_ITEMS.includes(a.item)) fail("item cannot be given");
+    const qty = clamp(toInt(a.qty, 1), 1, 3);
+    if (state.npc.trust < 2) fail("trust too low for gifts");
+    if (state.flags.giftsToday + qty > LIMITS.giftsPerDay) fail("daily gift limit reached");
+    addItem(state, a.item, qty);
+    state.flags.giftsToday += qty;
+    return `Received ${qty} ${a.item}`;
+  },
+
+  UNLOCK_PLOT(state, a) {
+    const plot = getPlot(state, a.id);
+    if (!plot.locked) fail("plot already unlocked");
+    if (state.npc.trust < 4) fail("trust too low to unlock a plot");
+    if (!hasDoneQuest(state)) fail("player has not completed a quest yet");
+    plot.locked = false;
+    return `Plot ${plot.id} unlocked`;
+  },
+
+  SET_PRICE(state, a) {
+    if (!CROPS.includes(a.crop)) fail("unknown crop");
+    const raw = Number(a.mult);
+    if (!Number.isFinite(raw)) fail("invalid multiplier");
+    const mult = Math.round(clamp(raw, 0.8, 1.3) * 100) / 100;
+    if (mult > 1 && state.npc.trust < 3) fail("trust too low for a better price");
+    if (mult < 1 && state.npc.trust > 0) fail("Raghu only punishes when trust is low");
+    state.prices[a.crop] = mult;
+    return `${a.crop} price multiplier is now x${mult}`;
+  },
+
+  CHANGE_WEATHER(state, a) {
+    if (!WEATHERS.includes(a.weather)) fail("unknown weather");
+    if (!state.flags.canChangeWeather) fail("player has not earned weather help");
+    if (state.flags.weatherChangesToday >= LIMITS.weatherChangesPerDay) fail("weather already changed today");
+    if (state.weather === a.weather) fail("weather is already like that");
+    state.weather = a.weather;
+    state.flags.weatherChangesToday += 1;
+    if (a.weather === "rain") for (const p of state.plots) if (p.crop) p.watered = true; // rain does not set wateredAt
+    return `Weather changed to ${a.weather}`;
+  },
+};
+
+export function applyActions(state, actions = []) {
+  const applied = [];
+  const rejected = [];
+  const seen = new Set();
+  for (const raw of (Array.isArray(actions) ? actions : []).slice(0, LIMITS.maxActionsPerTurn)) {
+    const key = JSON.stringify(raw);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const handler =
+      typeof raw?.type === "string" && Object.hasOwn(npcActions, raw.type) ? npcActions[raw.type] : null;
+    if (!handler) {
+      rejected.push({ action: raw, reason: "unknown action" });
+      continue;
+    }
+    try {
+      applied.push({ type: raw.type, text: handler(state, raw) });
+    } catch (e) {
+      if (e instanceof RuleError) rejected.push({ action: raw, reason: e.message });
+      else throw e;
+    }
+  }
   return { applied, rejected };
 }
 
-/**
- * Handle direct player interactions on the farm panel:
- * - PLANT (consumes seed)
- * - WATER (waters plot)
- * - HARVEST (collects wheat)
- * - ADVANCE_DAY (sleeps, grows crops, updates soil)
- * - SELL_WHEAT (sells wheat for gold)
- * - BUY_SEEDS (buys seeds for 10 gold)
- */
-export function handlePlayerFarmAction(state, action, params = {}) {
-  switch (action) {
-    case "PLANT": {
-      const plot = state.plots.find((p) => p.id === params.plotId);
-      if (!plot || !plot.unlocked) return { success: false, error: "Plot is locked or invalid" };
-      if (plot.crop !== null) return { success: false, error: "Plot already has a crop" };
-      if ((state.inventory.seeds || 0) < 1) return { success: false, error: "No seeds in inventory" };
+// ---------------------------------------------------------------- LLM output
 
-      state.inventory.seeds -= 1;
-      plot.crop = "wheat";
-      plot.stage = 1; // 1: sprout, 2: growing, 3: ripe
-      plot.watered = false;
+// Cleans the model's JSON. Throws if there is no usable reply, so the caller
+// can retry or switch to the fallback brain.
+export function normalizeNpcOutput(out) {
+  if (!out || typeof out !== "object" || typeof out.reply !== "string" || !out.reply.trim())
+    throw new Error("NPC output has no reply");
+  return {
+    reply: out.reply.trim().slice(0, LIMITS.replyChars),
+    emotion: EMOTIONS.includes(out.emotion) ? out.emotion : "neutral",
+    trust_delta: clamp(toInt(out.trust_delta), -2, 2),
+    memory_facts: (Array.isArray(out.memory_facts) ? out.memory_facts : [])
+      .filter((f) => typeof f === "string" && f.trim())
+      .map((f) => f.trim().slice(0, 120))
+      .slice(0, 2),
+    actions: (Array.isArray(out.actions) ? out.actions : [])
+      .filter((a) => a && typeof a === "object" && typeof a.type === "string")
+      .slice(0, LIMITS.maxActionsPerTurn),
+  };
+}
 
-      // Auto check first_harvest quest step 1
-      const firstHarvest = state.quests.find((q) => q.id === "first_harvest" && q.status === "active");
-      if (firstHarvest && firstHarvest.step === 1) {
-        firstHarvest.step = 2;
-      }
-
-      return { success: true, message: `Planted wheat seed in Plot #${plot.id}.` };
+function addFacts(state, facts) {
+  const known = new Set(state.memory.facts.map((f) => f.toLowerCase()));
+  for (const f of facts) {
+    if (!known.has(f.toLowerCase())) {
+      state.memory.facts.push(f);
+      known.add(f.toLowerCase());
     }
-
-    case "WATER": {
-      const plot = state.plots.find((p) => p.id === params.plotId);
-      if (!plot || !plot.unlocked) return { success: false, error: "Plot is locked or invalid" };
-      if (plot.crop === null) return { success: false, error: "No crop planted here to water" };
-      if (plot.watered) return { success: false, error: "Plot is already well watered" };
-
-      plot.watered = true;
-
-      // Auto check dawn_watering quest
-      const dawnQuest = state.quests.find((q) => q.id === "dawn_watering" && q.status === "active");
-      if (dawnQuest) {
-        const allWatered = state.plots.filter((p) => p.unlocked && p.crop !== null).every((p) => p.watered);
-        if (allWatered) {
-          dawnQuest.status = "completed";
-          state.npc.trust = clamp(state.npc.trust + 2, -10, 10);
-          state.gold += 35;
-        }
-      }
-
-      return { success: true, message: `Watered Plot #${plot.id}. Soil is damp and healthy.` };
-    }
-
-    case "HARVEST": {
-      const plot = state.plots.find((p) => p.id === params.plotId);
-      if (!plot || !plot.unlocked) return { success: false, error: "Plot is locked or invalid" };
-      if (!plot.crop || plot.stage < 3) return { success: false, error: "Crop is not ripe yet" };
-
-      plot.crop = null;
-      plot.stage = 0;
-      plot.watered = false;
-      state.inventory.wheat = (state.inventory.wheat || 0) + 1;
-
-      // Check first_harvest completion
-      const firstHarvest = state.quests.find((q) => q.id === "first_harvest" && q.status === "active");
-      if (firstHarvest) {
-        firstHarvest.status = "completed";
-        state.gold += QUEST_CATALOG.first_harvest.reward.gold;
-        state.inventory.seeds = (state.inventory.seeds || 0) + QUEST_CATALOG.first_harvest.reward.seeds;
-        state.npc.trust = clamp(state.npc.trust + QUEST_CATALOG.first_harvest.reward.trust, -10, 10);
-      }
-
-      // Check bountiful_wheat quest
-      const bountiful = state.quests.find((q) => q.id === "bountiful_wheat" && q.status === "active");
-      if (bountiful) {
-        bountiful.step = Math.min(bountiful.maxSteps, (state.inventory.wheat || 0));
-        if (bountiful.step >= bountiful.maxSteps) {
-          bountiful.status = "completed";
-          state.gold += QUEST_CATALOG.bountiful_wheat.reward.gold;
-          state.inventory.seeds += QUEST_CATALOG.bountiful_wheat.reward.seeds;
-          state.npc.trust = clamp(state.npc.trust + QUEST_CATALOG.bountiful_wheat.reward.trust, -10, 10);
-        }
-      }
-
-      return { success: true, message: `Harvested golden wheat bundle from Plot #${plot.id}!` };
-    }
-
-    case "ADVANCE_DAY": {
-      state.day += 1;
-
-      // Weather transition: 60% clear, 20% overcast, 10% rain, 10% drought
-      const rand = Math.random();
-      if (rand < 0.6) state.weather = "clear";
-      else if (rand < 0.8) state.weather = "overcast";
-      else if (rand < 0.9) state.weather = "rain";
-      else state.weather = "drought";
-
-      // Crop growth update
-      for (const plot of state.plots) {
-        if (!plot.unlocked || !plot.crop) continue;
-
-        if (plot.watered || state.weather === "rain") {
-          plot.stage = Math.min(3, plot.stage + 1);
-        }
-        // Soil dries up each morning unless it's raining
-        plot.watered = state.weather === "rain";
-      }
-
-      return {
-        success: true,
-        message: `Morning breaks on Day ${state.day}. Weather: ${state.weather.toUpperCase()}.`,
-      };
-    }
-
-    case "SELL_WHEAT": {
-      const qty = parseInt(params.qty, 10) || 1;
-      if ((state.inventory.wheat || 0) < qty) {
-        return { success: false, error: "Not enough wheat to sell" };
-      }
-      const earnings = qty * state.market.wheat_price;
-      state.inventory.wheat -= qty;
-      state.gold += earnings;
-      return { success: true, message: `Sold ${qty} wheat for ${earnings} gold!` };
-    }
-
-    case "BUY_SEEDS": {
-      const qty = parseInt(params.qty, 10) || 1;
-      const cost = qty * state.market.seed_cost;
-      if (state.gold < cost) {
-        return { success: false, error: "Not enough gold to buy seeds" };
-      }
-      state.gold -= cost;
-      state.inventory.seeds = (state.inventory.seeds || 0) + qty;
-      return { success: true, message: `Purchased ${qty} seeds for ${cost} gold.` };
-    }
-
-    default:
-      return { success: false, error: `Unknown farm action: ${action}` };
   }
+  state.memory.facts = state.memory.facts.slice(-LIMITS.maxFacts);
+}
+
+// One full Raghu turn. `rawOut` is the parsed JSON from the LLM (or the
+// fallback brain). Actions run BEFORE the trust change, so gating uses the
+// trust the model saw in its prompt.
+export function applyNpcTurn(state, rawOut, playerMessage = "") {
+  const out = normalizeNpcOutput(rawOut);
+  const { applied, rejected } = applyActions(state, out.actions);
+  const events = autoAdvanceQuests(state);
+  const trustChange = applyTrustDelta(state, out.trust_delta);
+  state.npc.mood = out.emotion;
+  addFacts(state, out.memory_facts);
+  state.memory.recent.push({ player: String(playerMessage).slice(0, 500), npc: out.reply });
+  state.memory.recent = state.memory.recent.slice(-LIMITS.recentTurns);
+  state.memory.turnsSinceSummary += 1;
+  return {
+    reply: out.reply,
+    emotion: out.emotion,
+    trustChange,
+    applied,
+    rejected,
+    events,
+    needsSummary: state.memory.turnsSinceSummary >= LIMITS.summaryEvery,
+  };
+}
+
+// Call with the summarizer's output; keeps the last 2 turns verbatim.
+export function foldSummary(state, newSummary) {
+  state.memory.summary = String(newSummary).trim().slice(0, 600);
+  state.memory.recent = state.memory.recent.slice(-2);
+  state.memory.turnsSinceSummary = 0;
+}
+
+// ---------------------------------------------------------------- player events
+
+const playerEvents = {
+  PLANT(state, e) {
+    const plot = getPlot(state, e.plotId);
+    if (plot.locked) fail("that plot is locked");
+    if (plot.crop) fail("something is already planted there");
+    if (!CROPS.includes(e.crop)) fail("unknown crop");
+    if (state.inventory.seeds < 1) fail("no seeds left");
+    state.inventory.seeds -= 1;
+    Object.assign(plot, { crop: e.crop, growth: 0, watered: false, wateredAt: null });
+    return `Planted ${e.crop} in plot ${plot.id}`;
+  },
+
+  WATER(state, e) {
+    const plot = getPlot(state, e.plotId);
+    if (!plot.crop) fail("nothing to water");
+    if (plot.watered) fail("already watered");
+    if (state.inventory.water_can < 1) fail("you need a water can");
+    plot.watered = true;
+    plot.wateredAt = state.time;
+    return `Watered plot ${plot.id} at ${state.time}:00`;
+  },
+
+  HARVEST(state, e) {
+    const plot = getPlot(state, e.plotId);
+    if (!plot.crop) fail("nothing to harvest");
+    if (plot.growth < GROWTH_DAYS) fail("crop is not ready yet");
+    addItem(state, "wheat", 2);
+    Object.assign(plot, { crop: null, growth: 0, watered: false, wateredAt: null });
+    state.flags.harvestedWheat = true;
+    return `Harvested plot ${plot.id}: +2 wheat`;
+  },
+
+  SELL(state, e) {
+    const item = e.item ?? "wheat";
+    const qty = clamp(toInt(e.qty, 1), 1, LIMITS.itemCap);
+    if (item !== "wheat") fail("Raghu only buys wheat");
+    if (state.inventory.wheat < qty) fail("not enough wheat");
+    const gold = Math.round(qty * BASE_PRICE * state.prices.wheat);
+    state.inventory.wheat -= qty;
+    state.gold += gold;
+    return `Sold ${qty} wheat for ${gold} gold`;
+  },
+
+  PICK_FLOWERS(state) {
+    if (state.flags.flowersToday >= LIMITS.flowersPerDay) fail("no more flowers to pick today");
+    state.flags.flowersToday += 1;
+    addItem(state, "flowers", 1);
+    return "Picked a flower";
+  },
+
+  VISIT_SHRINE(state) {
+    if (state.inventory.flowers < 1) fail("you have no offering");
+    state.inventory.flowers -= 1;
+    state.flags.shrineOffered = true;
+    return "Left an offering at the village shrine";
+  },
+
+  PASS_TIME(state, e) {
+    const hours = clamp(toInt(e.hours, 1), 1, 6);
+    if (state.time + hours > 23) fail("too late in the day, go to sleep");
+    state.time += hours;
+    return `It is now ${state.time}:00`;
+  },
+
+  NEXT_DAY(state, e) {
+    for (const p of state.plots) {
+      if (p.crop && p.watered) p.growth += 1;
+      p.watered = false;
+      p.wateredAt = null;
+    }
+    state.day += 1;
+    state.time = 6;
+    state.weather = WEATHERS.includes(e?.weather) ? e.weather : Math.random() < 0.25 ? "rain" : "clear";
+    if (state.weather === "rain") for (const p of state.plots) if (p.crop) p.watered = true;
+    Object.assign(state.flags, {
+      giftsToday: 0,
+      trustGainedToday: 0,
+      weatherChangesToday: 0,
+      flowersToday: 0,
+    });
+    return `Day ${state.day} begins (${state.weather})`;
+  },
+};
+
+export function applyPlayerEvent(state, event) {
+  const fn = Object.hasOwn(playerEvents, event?.type ?? "") ? playerEvents[event.type] : null;
+  if (!fn) return { ok: false, message: "unknown event", events: [] };
+  try {
+    const message = fn(state, event);
+    return { ok: true, message, events: autoAdvanceQuests(state) };
+  } catch (e) {
+    if (e instanceof RuleError) return { ok: false, message: e.message, events: [] };
+    throw e;
+  }
+}
+
+// ---------------------------------------------------------------- prompt helper
+
+// Human-readable strings for the WORLD STATE block of Raghu's prompt.
+export function promptSummary(state) {
+  const plots = state.plots
+    .map((p) =>
+      `plot ${p.id}: ${
+        p.locked ? "locked" : p.crop ? `${p.crop} (${p.growth}/${GROWTH_DAYS} days${p.watered ? ", watered" : ""})` : "empty"
+      }`
+    )
+    .join(", ");
+  const inventory =
+    Object.entries(state.inventory)
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${k} x${n}`)
+      .join(", ") || "nothing";
+  const activeQuests =
+    state.quests
+      .filter((e) => e.status === "active")
+      .map((e) => {
+        const q = QUESTS[e.id];
+        return `${e.id} (step ${e.step + 1}/${q.steps.length}: ${q.steps[e.step].desc})`;
+      })
+      .join("; ") || "none";
+  const completedQuests =
+    state.quests.filter((e) => e.status === "done").map((e) => e.id).join(", ") || "none";
+  return {
+    time: `${state.time}:00`,
+    plots,
+    inventory,
+    activeQuests,
+    completedQuests,
+    wheatPrice: `x${state.prices.wheat}`,
+    canChangeWeather: state.flags.canChangeWeather,
+  };
 }
