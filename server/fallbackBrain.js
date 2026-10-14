@@ -107,7 +107,8 @@ export function fallbackBrain(state, message) {
   }
 
   // 6. Unlock land / plot inquiry
-  if (text.includes("unlock") || text.includes("more land") || text.includes("plot") || text.includes("expand")) {
+  if (text.includes("unlock") || text.includes("more land") || text.includes("unlock plot") || text.includes("expand farm")) {
+
     const hasCompletedQuest = state.quests.some((q) => q.status === "completed");
     if (state.npc.trust >= 4 && hasCompletedQuest) {
       const lockedPlot = state.plots.find((p) => !p.unlocked);

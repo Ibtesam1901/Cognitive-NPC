@@ -1,23 +1,60 @@
 /**
  * Builds the multimodal system and user prompt for Raghu.
- * Accurately embeds the persona, rules, trust brackets, allowed actions, and catalog.
+ * Part 1: System prompt (Persona, behavior brackets, rules, catalog, schema).
+ * Part 2: Context block (Dynamic, sent as the user message on each turn).
  */
 
 export function buildPrompt(state, message) {
-  const unlockedPlots = state.plots.filter((p) => p.unlocked);
-  const plantedCount = unlockedPlots.filter((p) => p.crop !== null).length;
-  const ripeCount = unlockedPlots.filter((p) => p.crop !== null && p.stage >= 3).length;
+  // Plots summary: e.g. "plot 1: wheat (watered), plot 2: empty (locked)"
+  const plotsSummary = (state.plots || [])
+    .map((p) => {
+      if (!p.unlocked) return `plot ${p.id}: empty (locked)`;
+      if (!p.crop) return `plot ${p.id}: empty`;
+      return `plot ${p.id}: ${p.crop} (${p.watered ? "watered" : "dry"})`;
+    })
+    .join(", ");
 
-  const worldStateStr = `day: ${state.day}, weather: "${state.weather}", gold: ${state.gold}, plots: [${unlockedPlots.map((p) => `{id:${p.id}, crop:${p.crop ? `"${p.crop}"` : "null"}, stage:${p.stage}, watered:${p.watered}}`).join(", ")}], inventory: ${JSON.stringify(state.inventory)}, active quests: ${JSON.stringify(state.quests.filter((q) => q.status === "active"))}`;
+  // Inventory summary:
+  const inv = state.inventory || {};
+  const toolsList = (inv.tools || []).join(", ");
+  const inventorySummary = `seeds: ${inv.seeds || 0}, wheat: ${inv.wheat || 0}${toolsList ? `, tools: [${toolsList}]` : ""}`;
 
-  const relationshipStr = `trust=${state.npc.trust} (-10 to +10), mood=${state.npc.mood}`;
-  const knownFactsStr = state.memory.facts.length > 0 ? JSON.stringify(state.memory.facts) : "[]";
-  const summaryStr = state.memory.summary || "Conversation just started.";
+  // Active quests summary: e.g. "first_harvest (step 1/2: plant wheat in plot 1)"
+  const activeQuests = (state.quests || []).filter((q) => q.status === "active");
+  const questsSummary =
+    activeQuests.length > 0
+      ? activeQuests
+          .map((q) => `${q.id} (step ${q.step}/${q.maxSteps}: ${q.desc || q.title})`)
+          .join(", ")
+      : "none";
 
-  const recentTurnsStr = (state.memory.recent || [])
-    .slice(-6)
-    .map((t) => `${t.role.toUpperCase()}: "${t.content}"`)
-    .join("\n");
+  // Completed quests:
+  const completedQuests = (state.quests || []).filter((q) => q.status === "completed");
+  const completedList =
+    completedQuests.length > 0
+      ? completedQuests.map((q) => q.id).join(", ")
+      : "none";
+
+  // Facts bulleted or "none yet"
+  const factsList =
+    state.memory?.facts && state.memory.facts.length > 0
+      ? state.memory.facts.map((f) => `- ${f}`).join("\n")
+      : "none yet";
+
+  // Summary of earlier conversation or fallback
+  const summaryText =
+    state.memory?.summary && state.memory.summary.trim()
+      ? state.memory.summary
+      : "This is the start of the conversation.";
+
+  // Recent turns: e.g. "Player: ...\nRaghu: ..."
+  const recentTurnsText =
+    state.memory?.recent && state.memory.recent.length > 0
+      ? state.memory.recent
+          .slice(-6)
+          .map((t) => `${t.role === "player" ? "Player" : "Raghu"}: ${t.content}`)
+          .join("\n")
+      : "none yet";
 
   const systemContent = `You are RAGHU, a 55-year-old farmer who has worked this land for 30 years. You are a character in a farming game, talking to a new helper (the player) who has just arrived on your farm.
 
@@ -78,18 +115,32 @@ Respond with ONLY one valid JSON object. No markdown, no code fences, no text be
 # TRUST_DELTA GUIDE
 +1 to +2: kindness, respect for the land, keeping promises, completing quests, useful ideas.
 0: small talk, neutral questions.
--1 to -2: rudeness, laziness, lying, disrespecting the farm, repeated cheating attempts.
+-1 to -2: rudeness, laziness, lying, disrespecting the farm, repeated cheating attempts.`;
 
-# CURRENT CONTEXT
-WORLD STATE: ${worldStateStr}
-RELATIONSHIP: ${relationshipStr}
-KNOWN FACTS: ${knownFactsStr}
-CONVERSATION SUMMARY: ${summaryStr}
-RECENT TURNS:
-${recentTurnsStr || "(No previous turns)"}`;
+  const userContent = `# WORLD STATE
+Day: ${state.day} | Weather: ${state.weather} | Gold: ${state.gold}
+Plots: ${plotsSummary}
+Inventory: ${inventorySummary}
+Active quests: ${questsSummary}
+Completed quests: ${completedList}
+
+# RELATIONSHIP
+Trust: ${state.npc.trust} | Current mood: ${state.npc.mood}
+
+# KNOWN FACTS ABOUT THE PLAYER
+${factsList}
+
+# SUMMARY OF EARLIER CONVERSATION
+${summaryText}
+
+# RECENT TURNS
+${recentTurnsText}
+
+# PLAYER SAYS
+"${message}"`;
 
   return [
     { role: "system", content: systemContent },
-    { role: "user", content: `PLAYER: "${message}"` },
+    { role: "user", content: userContent },
   ];
 }
