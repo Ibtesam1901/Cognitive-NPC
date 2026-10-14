@@ -6,6 +6,16 @@ import { buildMessages } from "./prompt.js";
 import { askLLM } from "./llm.js";
 import { parseReply, applyReply } from "./apply.js";
 import { maybeSummarize } from "./memory.js";
+// [VOICE-UPGRADE START]
+import { handleTTS, getTTSStatus } from "./tts.js";
+// [VOICE-UPGRADE END]
+// [INSPECTOR START]
+import { createTrace, addSessionTrace, handleGetTraces } from "./trace.js";
+import { getClient } from "./llm.js";
+// [INSPECTOR END]
+// [SUGGESTIONS START]
+import { generateSuggestions, getFallbackSuggestions } from "./suggest.js";
+// [SUGGESTIONS END]
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -54,15 +64,39 @@ app.post("/api/chat", async (req, res) => {
   const state = getState(sessionId);
   const text = message.trim().slice(0, 500); // cap input length
 
+  // [INSPECTOR START]
+  const requestStartTime = Date.now();
+  const stateBefore = {
+    trust: state.trust,
+    mood: state.mood,
+    quests: { ...state.quests },
+    inventory: [...(state.inventory || [])],
+    farmHealth: state.farmHealth,
+    facts: [...(state.facts || [])],
+    promises: [...(state.promises || [])],
+    flags: { ...(state.flags || {}) },
+    history: [...(state.history || [])],
+  };
+  let jsonRetryFired = false;
+  let llmMs = 0;
+  // [INSPECTOR END]
+
   try {
     const messages = buildMessages(state, text, language, imageContext);
+    const llmStartTime = Date.now();
     let raw = await askLLM(messages, activeConfig, state, text, language);
+    llmMs = Date.now() - llmStartTime;
     let parsed = parseReply(raw);
 
     // One retry if JSON is malformed
     if (!parsed) {
       console.warn("[Chat] Retrying LLM prompt due to unparseable JSON...");
+      // [INSPECTOR START]
+      jsonRetryFired = true;
+      // [INSPECTOR END]
+      const retryStart = Date.now();
       raw = await askLLM(messages, activeConfig, state, text, language);
+      llmMs += Date.now() - retryStart;
       parsed = parseReply(raw);
     }
 
@@ -89,6 +123,61 @@ app.post("/api/chat", async (req, res) => {
 
     await maybeSummarize(state, activeConfig);
 
+    // [INSPECTOR START]
+    const stateAfter = {
+      trust: state.trust,
+      mood: state.mood,
+      quests: { ...state.quests },
+      inventory: [...(state.inventory || [])],
+      farmHealth: state.farmHealth,
+      facts: [...(state.facts || [])],
+      promises: [...(state.promises || [])],
+      flags: { ...(state.flags || {}) },
+      history: [...(state.history || [])],
+    };
+    const clientConfigured = Boolean(getClient(activeConfig));
+    const source = clientConfigured ? "llm" : "simulator";
+    const totalMs = Date.now() - requestStartTime;
+    const systemPrompt = messages[0]?.content || "";
+
+    const trace = createTrace(
+      parsed,
+      stateBefore,
+      stateAfter,
+      { events, actionRejected, rejectionReason },
+      {
+        source,
+        llmMs,
+        totalMs,
+        jsonRetryFired,
+        systemPromptLength: systemPrompt.length,
+        historyCount: Math.max(0, messages.length - 2),
+        systemPrompt,
+        userMessage: text,
+      }
+    );
+    addSessionTrace(sessionId, trace);
+    // [INSPECTOR END]
+
+    // [SUGGESTIONS START]
+    let suggestions = undefined;
+    if (process.env.SUGGESTIONS_ENABLED !== "false") {
+      try {
+        suggestions = await generateSuggestions({
+          state,
+          playerMessage: text,
+          raghuReply: parsed.reply,
+          language,
+          config: activeConfig,
+          actionRejected,
+          rejectionReason,
+        });
+      } catch (sugErr) {
+        console.warn("[Suggestions] Chat generation skipped:", sugErr?.message || sugErr);
+      }
+    }
+    // [SUGGESTIONS END]
+
     res.json({
       reply: parsed.reply,
       events,
@@ -100,6 +189,12 @@ app.post("/api/chat", async (req, res) => {
         rawTarget: parsed.action_target,
         rawMood: parsed.mood,
       },
+      // [INSPECTOR START]
+      trace,
+      // [INSPECTOR END]
+      // [SUGGESTIONS START]
+      ...(suggestions ? { suggestions } : {}),
+      // [SUGGESTIONS END]
     });
   } catch (e) {
     console.error("Chat error:", e);
@@ -209,6 +304,28 @@ app.post("/api/reset", (req, res) => {
     state: publicState(getState(sessionId)),
   });
 });
+
+// [VOICE-UPGRADE START]
+app.post("/api/tts", handleTTS);
+app.get("/api/tts/status", getTTSStatus);
+// [VOICE-UPGRADE END]
+
+// [INSPECTOR START]
+app.get("/api/trace", handleGetTraces);
+// [INSPECTOR END]
+
+// [SUGGESTIONS START]
+app.get("/api/suggestions", (req, res) => {
+  if (process.env.SUGGESTIONS_ENABLED === "false") {
+    return res.status(404).json({ error: "Suggestions disabled" });
+  }
+  const sessionId = String(req.query.sessionId || "default");
+  const language = String(req.query.language || "English");
+  const state = getState(sessionId);
+  const suggestions = getFallbackSuggestions(state, language);
+  res.json({ suggestions });
+});
+// [SUGGESTIONS END]
 
 app.listen(PORT, () => {
   console.log(`🌾 Cognitive NPC Server running on port ${PORT}`);

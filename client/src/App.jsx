@@ -35,6 +35,23 @@ import farmBg from "./assets/farm_bg.jpg";
 import pumpBlueprint from "./assets/pump_blueprint.jpg";
 import valleyMap from "./assets/valley_map.jpg";
 import "./App.css";
+// [VOICE-UPGRADE START]
+import { speak as playVoice, stop as stopVoice } from "./utils/voice.js";
+import { RaghuTalking, TypewriterText } from "./components/RaghuTalking.jsx";
+// [VOICE-UPGRADE END]
+// [INSPECTOR START]
+import { InspectorPanel } from "./components/InspectorPanel.jsx";
+import { ShieldCheck } from "lucide-react";
+// [INSPECTOR END]
+// [3D-MODE START]
+import { Suspense, lazy } from "react";
+import { Box } from "lucide-react";
+import { isWebGLAvailable, isLowPowerDevice } from "./three/capabilities.js";
+const FarmScene = lazy(() => import("./three/FarmScene.jsx"));
+// [3D-MODE END]
+// [SUGGESTIONS START]
+import { SuggestionChips } from "./components/SuggestionChips.jsx";
+// [SUGGESTIONS END]
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -109,11 +126,139 @@ export default function App() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [speechEnabled, setSpeechEnabled] = useState(true);
+  // [VOICE-UPGRADE START]
+  const [speechEnabled, setSpeechEnabled] = useState(
+    localStorage.getItem("npc_voice_enabled") !== null
+      ? localStorage.getItem("npc_voice_enabled") === "true"
+      : true
+  );
+  const [voiceSpeed, setVoiceSpeed] = useState(
+    parseFloat(localStorage.getItem("npc_voice_speed") || "1.0")
+  );
+  const [voiceProviderStatus, setVoiceProviderStatus] = useState({ provider: "none", configured: false });
+  const [audioAnalyser, setAudioAnalyser] = useState(null);
+  const [isRealAudio, setIsRealAudio] = useState(false);
+  // [VOICE-UPGRADE END]
   const [isListening, setIsListening] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  // [INSPECTOR START]
+  const [showInspector, setShowInspector] = useState(false);
+  const [traces, setTraces] = useState([]);
+  // [INSPECTOR END]
+  // [3D-MODE START]
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem("npc_view_mode");
+      return saved === "3D" ? "3D" : "2D";
+    } catch {
+      return "2D";
+    }
+  });
+  const [threeQuality, setThreeQuality] = useState(() => {
+    try {
+      return localStorage.getItem("npc_3d_quality") || "medium";
+    } catch {
+      return "medium";
+    }
+  });
+  const [threeFallbackToast, setThreeFallbackToast] = useState(null);
+
+  const toggleViewMode = () => {
+    sound.playClick();
+    if (viewMode === "2D") {
+      if (!isWebGLAvailable()) {
+        setThreeFallbackToast("WebGL is not supported in this browser/device. Staying in 2D mode.");
+        return;
+      }
+      if (isLowPowerDevice()) {
+        setThreeFallbackToast("Low-power device detected. Running 3D in battery-saver mode.");
+      }
+      try {
+        localStorage.setItem("npc_view_mode", "3D");
+      } catch {
+        // ignore storage error
+      }
+      setViewMode("3D");
+    } else {
+      try {
+        localStorage.setItem("npc_view_mode", "2D");
+      } catch {
+        // ignore storage error
+      }
+      setViewMode("2D");
+    }
+  };
+
+  const handleThreeFallback = (err) => {
+    try {
+      localStorage.setItem("npc_view_mode", "2D");
+    } catch {
+      // ignore
+    }
+    setViewMode("2D");
+    setThreeFallbackToast(`3D scene encountered an issue (${err?.message || "WebGL error"}). Reverted to 2D.`);
+  };
+  // [3D-MODE END]
   const [language, setLanguage] = useState("English"); // English | Hindi | Hinglish
+  // [SUGGESTIONS START]
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem("npc_suggestions_on");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  const fetchOpeningSuggestions = async (lang = language) => {
+    if (!suggestionsEnabled) return;
+    try {
+      setSuggestionsLoading(true);
+      const res = await fetch(`${API}/api/suggestions?sessionId=${sessionId}&language=${lang}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.suggestions) {
+          setSuggestions(data.suggestions);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load opening suggestions:", e);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!suggestionsEnabled) return;
+    let isMounted = true;
+    const loadSuggestions = async () => {
+      try {
+        setSuggestionsLoading(true);
+        const res = await fetch(`${API}/api/suggestions?sessionId=${sessionId}&language=${language}`);
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (data?.suggestions && isMounted) {
+            setSuggestions(data.suggestions);
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (isMounted) setSuggestionsLoading(false);
+      }
+    };
+
+    if (messages.length <= 1) {
+      loadSuggestions();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [language, suggestionsEnabled, messages.length]);
+  // [SUGGESTIONS END]
   const [serverHealth, setServerHealth] = useState({ online: false, hasApiKey: false, model: "" });
   const [isRaghuSpeaking, setIsRaghuSpeaking] = useState(false);
   const [mouthOpen, setMouthOpen] = useState(false);
@@ -166,10 +311,19 @@ export default function App() {
     }
   }, []);
 
-  // Keyboard accessibility: ESC key closes modals
+  // Keyboard accessibility: ESC key closes modals, Ctrl+Shift+D toggles Inspector
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // [INSPECTOR START]
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "D" || e.key === "d")) {
+        e.preventDefault();
+        setShowInspector((prev) => !prev);
+      }
+      // [INSPECTOR END]
       if (e.key === "Escape") {
+        // [INSPECTOR START]
+        setShowInspector(false);
+        // [INSPECTOR END]
         setShowSettings(false);
         setShowGuide(false);
         setInspectedImage(null);
@@ -218,11 +372,43 @@ export default function App() {
     } catch {
       setServerHealth({ online: false, hasApiKey: false, model: "offline" });
     }
+    // [VOICE-UPGRADE START]
+    try {
+      const ttsRes = await fetch(`${API}/api/tts/status`);
+      if (ttsRes.ok) {
+        const ttsData = await ttsRes.json();
+        setVoiceProviderStatus(ttsData);
+      }
+    } catch {
+      setVoiceProviderStatus({ provider: "none", configured: false });
+    }
+    // [VOICE-UPGRADE END]
+    // [INSPECTOR START]
+    fetchTraces();
+    // [INSPECTOR END]
   };
+
+  // [INSPECTOR START]
+  const fetchTraces = async () => {
+    try {
+      const res = await fetch(`${API}/api/trace?sessionId=${sessionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.traces) {
+          setTraces(data.traces);
+        }
+      }
+    } catch {
+      // Trace fetch error ignored
+    }
+  };
+  // [INSPECTOR END]
 
   // Fetch initial game state and check server health in parallel on mount
   useEffect(() => {
     let isMounted = true;
+    let retryTimer = null;
+
     const initGame = async () => {
       try {
         const [stateRes, healthRes] = await Promise.all([
@@ -244,9 +430,15 @@ export default function App() {
             setServerHealth({ online: true, hasApiKey: data.hasApiKey, model: data.model });
           }
         }
+        // [INSPECTOR START]
+        fetchTraces();
+        // [INSPECTOR END]
       } catch {
         if (isMounted) {
           setServerHealth({ online: false, hasApiKey: false, model: "offline" });
+          retryTimer = setTimeout(() => {
+            if (isMounted) initGame();
+          }, 2000);
         }
       }
     };
@@ -254,6 +446,7 @@ export default function App() {
     initGame();
     return () => {
       isMounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, []);
 
@@ -270,74 +463,46 @@ export default function App() {
 
   // Text-to-speech for Raghu with multi-language accent support & synchronized 2D mouth/word animation
   const speakText = (text) => {
-    setIsRaghuSpeaking(true);
-    setMouthOpen(true);
-
-    if (!speechEnabled || !("speechSynthesis" in window)) {
-      // Graceful offline fallback simulation with word-by-word progression
-      const words = text.split(/\s+/).filter(Boolean);
-      let wordIdx = 0;
-      setCurrentSpokenWord(words[0] || "Speaking...");
-      const wordTimer = setInterval(() => {
-        wordIdx++;
-        if (wordIdx < words.length) {
-          setCurrentSpokenWord(words[wordIdx]);
-        }
-      }, 260);
-
-      const totalDuration = Math.min(Math.max(words.length * 280, 2500), 8000);
-      setTimeout(() => {
-        clearInterval(wordTimer);
-        setIsRaghuSpeaking(false);
-        setMouthOpen(false);
-        setCurrentSpokenWord("");
-      }, totalDuration);
+    // [VOICE-UPGRADE START]
+    if (!speechEnabled) {
+      stopVoice();
+      setIsRaghuSpeaking(false);
+      setMouthOpen(false);
+      setCurrentSpokenWord("");
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.88;
-    utterance.pitch = 0.85;
+    setIsRaghuSpeaking(true);
+    setMouthOpen(true);
 
-    utterance.onstart = () => {
-      setIsRaghuSpeaking(true);
-      setMouthOpen(true);
-    };
-
-    // Word boundary event for synchronizing mouth flap and active word display
-    utterance.onboundary = (e) => {
-      if (e.name === "word") {
-        const spokenWord = text.substring(e.charIndex, e.charIndex + (e.charLength || 6)).trim();
-        if (spokenWord) setCurrentSpokenWord(spokenWord);
+    playVoice(text, language, {
+      speed: voiceSpeed,
+      onStart: ({ isRealAudio: real, analyser }) => {
+        setIsRaghuSpeaking(true);
         setMouthOpen(true);
-      }
-    };
-
-    utterance.onend = () => {
-      setIsRaghuSpeaking(false);
-      setMouthOpen(false);
-      setCurrentSpokenWord("");
-    };
-
-    utterance.onerror = () => {
-      setIsRaghuSpeaking(false);
-      setMouthOpen(false);
-      setCurrentSpokenWord("");
-    };
-
-    const voices = window.speechSynthesis.getVoices();
-    if (language === "Hindi") {
-      const hiVoice = voices.find((v) => v.lang.includes("hi") || v.lang.includes("IN"));
-      if (hiVoice) utterance.voice = hiVoice;
-      utterance.lang = "hi-IN";
-    } else {
-      const inVoice = voices.find((v) => v.lang.includes("en-IN") || v.name.toLowerCase().includes("male"));
-      if (inVoice) utterance.voice = inVoice;
-      utterance.lang = "en-IN";
-    }
-
-    window.speechSynthesis.speak(utterance);
+        setIsRealAudio(Boolean(real));
+        if (analyser) setAudioAnalyser(analyser);
+      },
+      onBoundary: (e) => {
+        if (e.name === "word") {
+          const spokenWord =
+            e.word ||
+            (e.charIndex !== undefined
+              ? text.substring(e.charIndex, e.charIndex + (e.charLength || 6)).trim()
+              : "");
+          if (spokenWord) setCurrentSpokenWord(spokenWord);
+          setMouthOpen(true);
+        }
+      },
+      onEnd: () => {
+        setIsRaghuSpeaking(false);
+        setMouthOpen(false);
+        setCurrentSpokenWord("");
+        setAudioAnalyser(null);
+        setIsRealAudio(false);
+      },
+    });
+    // [VOICE-UPGRADE END]
   };
 
   const toggleMic = () => {
@@ -370,6 +535,16 @@ export default function App() {
     const text = (customText || input).trim();
     if (!text || loading) return;
 
+    // [VOICE-UPGRADE START]
+    stopVoice();
+    setIsRaghuSpeaking(false);
+    // [VOICE-UPGRADE END]
+    // [SUGGESTIONS START]
+    setSuggestions([]);
+    if (suggestionsEnabled) {
+      setSuggestionsLoading(true);
+    }
+    // [SUGGESTIONS END]
     sound.playClick();
     setInput("");
     addMessage("player", text);
@@ -415,11 +590,28 @@ export default function App() {
       if (data?.state) {
         setGame(data.state);
       }
+
+      // [INSPECTOR START]
+      if (data?.trace) {
+        setTraces((prev) => [data.trace, ...prev.filter((t) => t.id !== data.trace.id)]);
+      }
+      // [INSPECTOR END]
+      // [SUGGESTIONS START]
+      if (data?.suggestions && suggestionsEnabled) {
+        setSuggestions(data.suggestions);
+        setSuggestionsLoading(false);
+      } else if (suggestionsEnabled) {
+        fetchOpeningSuggestions(language);
+      }
+      // [SUGGESTIONS END]
     } catch (e) {
       sound.playBuzzer();
       addMessage("system", e.message || "Raghu seemed distracted. Try speaking again.", "⚠️");
     } finally {
       setLoading(false);
+      // [SUGGESTIONS START]
+      setSuggestionsLoading(false);
+      // [SUGGESTIONS END]
     }
   }
 
@@ -467,12 +659,23 @@ export default function App() {
 
   async function handleReset() {
     if (!window.confirm("Reset the game back to Day 1? Raghu will forget your conversation.")) return;
+    // [VOICE-UPGRADE START]
+    stopVoice();
+    setIsRaghuSpeaking(false);
+    // [VOICE-UPGRADE END]
     sound.playClick();
     try {
       const data = await post("/api/reset", {});
       if (data?.state) {
         setGame(data.state);
       }
+      // [INSPECTOR START]
+      setTraces([]);
+      // [INSPECTOR END]
+      // [SUGGESTIONS START]
+      setSuggestions([]);
+      fetchOpeningSuggestions(language);
+      // [SUGGESTIONS END]
       setMessages([
         {
           who: "system",
@@ -490,6 +693,10 @@ export default function App() {
     localStorage.setItem("npc_api_key", apiKey);
     localStorage.setItem("npc_base_url", baseURL);
     localStorage.setItem("npc_model_name", modelName);
+    // [VOICE-UPGRADE START]
+    localStorage.setItem("npc_voice_enabled", String(speechEnabled));
+    localStorage.setItem("npc_voice_speed", String(voiceSpeed));
+    // [VOICE-UPGRADE END]
     setShowSettings(false);
     sound.playChime();
     checkHealth();
@@ -502,6 +709,28 @@ export default function App() {
           <div className="spinner"></div>
           <h2>Entering Bhima's Hollow...</h2>
           <p>Connecting to Raghu's Cognitive Brain</p>
+          {!serverHealth.online && (
+            <div style={{ marginTop: "14px", fontSize: "0.8rem", color: "#f59e0b" }}>
+              Waiting for backend server on port 5000...
+              <div style={{ marginTop: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  style={{
+                    background: "rgba(217, 119, 6, 0.25)",
+                    border: "1px solid #d97706",
+                    color: "#fef3c7",
+                    borderRadius: "6px",
+                    padding: "4px 12px",
+                    fontSize: "0.75rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔄 Retry Connection
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -568,7 +797,45 @@ export default function App() {
   const activePrompts = PROMPT_SETS[language] || PROMPT_SETS.English;
 
   return (
-    <div className="app-container" style={{ backgroundImage: `url(${farmBg})` }}>
+    <div
+      className={`app-container ${viewMode === "3D" ? "mode-3d" : ""}`}
+      style={{ backgroundImage: viewMode === "3D" ? "none" : `url(${farmBg})` }}
+    >
+      {/* [3D-MODE START] */}
+      {viewMode === "3D" && (
+        <Suspense fallback={null}>
+          <FarmScene
+            trust={game?.trust ?? 0}
+            mood={game?.mood ?? "neutral"}
+            farmHealth={game?.farmHealth ?? 20}
+            quests={game?.quests ?? []}
+            inventory={game?.inventory ?? []}
+            flags={game?.flags ?? {}}
+            isSpeaking={isRaghuSpeaking}
+            quality={threeQuality}
+            onFallback={handleThreeFallback}
+            onPumpClick={() => {
+              sound.playClick();
+              setActivePuzzle("pump_valves");
+            }}
+            onNorthFieldClick={() => handleWorldAction("search_north_field")}
+            onWellClick={() => {
+              sound.playClick();
+              setActivePuzzle("map_trail");
+            }}
+            onMapClick={() => {
+              sound.playClick();
+              setInspectedImage({
+                title: "Ancient Valley Surveyor Map (Bhima's Hollow)",
+                src: valleyMap,
+                desc: "An ink-drawn antique map showing the Dead Banyan tree, Ancient Dry Well, and cow hoofprint trails.",
+                promptText: "Raghu-ji, I am examining your antique valley map. What can you tell me about the tracks by the Dead Banyan tree?",
+              });
+            }}
+          />
+        </Suspense>
+      )}
+      {/* [3D-MODE END] */}
       <div className="backdrop-overlay"></div>
 
       {/* Top Header Bar */}
@@ -585,19 +852,37 @@ export default function App() {
             <Languages size={15} className="lang-icon" />
             <button
               className={`lang-btn ${language === "English" ? "active" : ""}`}
-              onClick={() => { setLanguage("English"); sound.playClick(); }}
+              onClick={() => {
+                setLanguage("English");
+                sound.playClick();
+                // [SUGGESTIONS START]
+                fetchOpeningSuggestions("English");
+                // [SUGGESTIONS END]
+              }}
             >
               EN
             </button>
             <button
               className={`lang-btn ${language === "Hindi" ? "active" : ""}`}
-              onClick={() => { setLanguage("Hindi"); sound.playClick(); }}
+              onClick={() => {
+                setLanguage("Hindi");
+                sound.playClick();
+                // [SUGGESTIONS START]
+                fetchOpeningSuggestions("Hindi");
+                // [SUGGESTIONS END]
+              }}
             >
               हिंदी
             </button>
             <button
               className={`lang-btn ${language === "Hinglish" ? "active" : ""}`}
-              onClick={() => { setLanguage("Hinglish"); sound.playClick(); }}
+              onClick={() => {
+                setLanguage("Hinglish");
+                sound.playClick();
+                // [SUGGESTIONS START]
+                fetchOpeningSuggestions("Hinglish");
+                // [SUGGESTIONS END]
+              }}
             >
               Hinglish
             </button>
@@ -610,7 +895,17 @@ export default function App() {
 
           <button
             className={`icon-btn ${speechEnabled ? "active" : ""}`}
-            onClick={() => setSpeechEnabled(!speechEnabled)}
+            onClick={() => {
+              // [VOICE-UPGRADE START]
+              const next = !speechEnabled;
+              setSpeechEnabled(next);
+              localStorage.setItem("npc_voice_enabled", String(next));
+              if (!next) {
+                stopVoice();
+                setIsRaghuSpeaking(false);
+              }
+              // [VOICE-UPGRADE END]
+            }}
             title={speechEnabled ? "Voice Speech Enabled" : "Voice Speech Muted"}
           >
             {speechEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -623,6 +918,29 @@ export default function App() {
           >
             <HelpCircle size={18} />
           </button>
+
+          {/* [INSPECTOR START] */}
+          <button
+            className={`icon-btn ${showInspector ? "active" : ""}`}
+            onClick={() => setShowInspector(!showInspector)}
+            title="Architecture Inspector (Ctrl+Shift+D)"
+            style={showInspector ? { borderColor: "var(--accent-amber)", color: "#fef3c7" } : {}}
+          >
+            <ShieldCheck size={18} />
+          </button>
+          {/* [INSPECTOR END] */}
+
+          {/* [3D-MODE START] */}
+          <button
+            className={`view-mode-toggle ${viewMode === "3D" ? "active" : ""}`}
+            onClick={toggleViewMode}
+            title={`Toggle View Mode (Currently ${viewMode})`}
+          >
+            <Box size={16} />
+            <span>{viewMode}</span>
+            <span className="mode-badge">{viewMode === "3D" ? "3D Scene" : "2D UI"}</span>
+          </button>
+          {/* [3D-MODE END] */}
 
           <button
             className="icon-btn"
@@ -643,24 +961,18 @@ export default function App() {
         {/* Left Column: Raghu's Profile & Stats */}
         <aside className="panel profile-panel">
           <div className="portrait-wrapper">
-            <img
-              src={raghuChar.sprite}
+            {/* [VOICE-UPGRADE START] */}
+            <RaghuTalking
+              isSpeaking={isRaghuSpeaking}
+              analyser={audioAnalyser}
+              isRealAudio={isRealAudio}
+              idleSprite={raghuChar.sprite}
+              talkingSprite={raghuTalking}
+              currentWord={currentSpokenWord}
               alt="Raghu the Farmer"
-              className={`portrait-img ${isRaghuSpeaking ? "talking-anim lip-syncing" : ""}`}
+              showIndicator={true}
             />
-            {isRaghuSpeaking && (
-              <div className="speaking-tag">
-                <div className="soundwave-bars">
-                  <span className="sw-bar"></span>
-                  <span className="sw-bar"></span>
-                  <span className="sw-bar"></span>
-                  <span className="sw-bar"></span>
-                </div>
-                <span className="speaking-label">
-                  {currentSpokenWord ? `"${currentSpokenWord}"` : "Speaking..."}
-                </span>
-              </div>
-            )}
+            {/* [VOICE-UPGRADE END] */}
             <div className="gesture-badge" style={{ borderColor: raghuChar.gestureBadgeColor }}>
               <span className="gesture-badge-emoji">{raghuChar.gestureEmoji}</span>
               <span className="gesture-badge-text" style={{ color: raghuChar.gestureBadgeColor }}>
@@ -673,6 +985,13 @@ export default function App() {
                 {moodInfo.label}
               </span>
             </div>
+            {/* [3D-MODE START] */}
+            {viewMode === "3D" && (
+              <div className="portrait-3d-indicator">
+                🌐 3D Bhima's Hollow Active
+              </div>
+            )}
+            {/* [3D-MODE END] */}
           </div>
 
           {/* Dynamic Hand Gesture Showcase & Interactive Tester */}
@@ -815,9 +1134,16 @@ export default function App() {
               <h3>Porch of the Farmhouse</h3>
               <span>Turn {game.turnCount} • {language} dialogue driving game mechanics</span>
             </div>
-            <div className="ai-guardrail-badge" title="LLM proposes actions; server validator enforces rules">
-              <ShieldAlert size={14} /> Server Validated
+            {/* [INSPECTOR START] */}
+            <div
+              className="ai-guardrail-badge"
+              title="Click to open Architecture Inspector (Ctrl+Shift+D)"
+              onClick={() => setShowInspector(true)}
+              style={{ cursor: "pointer" }}
+            >
+              <ShieldAlert size={14} /> Server Validated 🛡️
             </div>
+            {/* [INSPECTOR END] */}
           </div>
 
           <div className="chat-scroll">
@@ -849,7 +1175,17 @@ export default function App() {
                     </div>
                   )}
 
-                  {m.who !== "system" && <div className="message-text">{m.text}</div>}
+                  {/* [VOICE-UPGRADE START] */}
+                  {m.who !== "system" && (
+                    <div className="message-text">
+                      {m.who === "npc" && i === messages.length - 1 && isRaghuSpeaking ? (
+                        <TypewriterText text={m.text} isTyping={true} />
+                      ) : (
+                        m.text
+                      )}
+                    </div>
+                  )}
+                  {/* [VOICE-UPGRADE END] */}
 
                   <span className="message-time">{m.time}</span>
                 </div>
@@ -873,6 +1209,21 @@ export default function App() {
             )}
             <div ref={endRef} />
           </div>
+
+          {/* [SUGGESTIONS START] */}
+          {suggestionsEnabled && (
+            <SuggestionChips
+              suggestions={suggestions}
+              loading={suggestionsLoading}
+              onSelect={(text) => {
+                setInput(text);
+                handleSend(text);
+              }}
+              inputEmpty={!input.trim()}
+              disabled={loading}
+            />
+          )}
+          {/* [SUGGESTIONS END] */}
 
           {/* Chat Input Bar */}
           <div className="input-bar">
@@ -1405,6 +1756,140 @@ export default function App() {
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
               />
+
+              {/* [VOICE-UPGRADE START] */}
+              <div className="voice-settings-section">
+                <div className="voice-section-header">
+                  <h4 className="voice-section-title">🗣️ Raghu's Voice & Accent</h4>
+                  <span className={`voice-status-pill ${voiceProviderStatus?.configured ? "cloud" : "browser"}`}>
+                    {voiceProviderStatus?.configured
+                      ? `🟢 Cloud TTS (${voiceProviderStatus.provider})`
+                      : "🌐 Browser Voice (Fallback)"}
+                  </span>
+                </div>
+
+                <div className="voice-toggle-row">
+                  <div className="voice-toggle-label">
+                    <strong>Voice Output</strong>
+                    <small>Play Raghu's spoken dialogues</small>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="voice-toggle-switch"
+                    checked={speechEnabled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setSpeechEnabled(enabled);
+                      localStorage.setItem("npc_voice_enabled", String(enabled));
+                      if (!enabled) {
+                        stopVoice();
+                        setIsRaghuSpeaking(false);
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="voice-speed-box">
+                  <div className="voice-speed-header">
+                    <label className="field-label" style={{ margin: 0 }}>Speaking Cadence</label>
+                    <span className="voice-speed-val">{voiceSpeed.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.7"
+                    max="1.3"
+                    step="0.05"
+                    value={voiceSpeed}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setVoiceSpeed(val);
+                      localStorage.setItem("npc_voice_speed", String(val));
+                    }}
+                    className="puzzle-slider"
+                  />
+                </div>
+
+                <div className="voice-test-row">
+                  <button
+                    type="button"
+                    className="voice-test-btn"
+                    onClick={() => {
+                      const sampleText =
+                        language === "Hindi"
+                          ? "राम राम भाई साहब! मैं रघु, भीमा हॉलो का किसान हूँ।"
+                          : language === "Hinglish"
+                          ? "Namaste! Main Raghu hoon, Bhima's Hollow ka farmer."
+                          : "Namaste! I am Raghu, farmer of Bhima's Hollow. Welcome to my farm.";
+                      speakText(sampleText);
+                    }}
+                    disabled={!speechEnabled}
+                  >
+                    🔊 Test Voice Sample
+                  </button>
+                  {isRaghuSpeaking && (
+                    <button
+                      type="button"
+                      className="preset-btn"
+                      onClick={() => {
+                        stopVoice();
+                        setIsRaghuSpeaking(false);
+                      }}
+                    >
+                      ⏹️ Stop
+                    </button>
+                  )}
+                </div>
+              </div>
+              {/* [VOICE-UPGRADE END] */}
+              {/* [3D-MODE START] */}
+              <div className="quality-settings-section">
+                <label className="field-label">3D Scene Quality (Visuals & Performance)</label>
+                <div className="quality-row">
+                  {["low", "medium", "high"].map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      className={`quality-chip ${threeQuality === q ? "active" : ""}`}
+                      onClick={() => {
+                        setThreeQuality(q);
+                        try {
+                          localStorage.setItem("npc_3d_quality", q);
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                    >
+                      {q.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* [3D-MODE END] */}
+              {/* [SUGGESTIONS START] */}
+              <div className="voice-toggle-row" style={{ marginTop: "12px" }}>
+                <div className="voice-toggle-label">
+                  <strong>Show Suggested Replies</strong>
+                  <small>Display 3 quick-reply prompt options above chat input</small>
+                </div>
+                <input
+                  type="checkbox"
+                  className="voice-toggle-switch"
+                  checked={suggestionsEnabled}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setSuggestionsEnabled(next);
+                    try {
+                      localStorage.setItem("npc_suggestions_on", String(next));
+                    } catch {
+                      // ignore
+                    }
+                    if (next && suggestions.length === 0) {
+                      fetchOpeningSuggestions(language);
+                    }
+                  }}
+                />
+              </div>
+              {/* [SUGGESTIONS END] */}
             </div>
             <div className="modal-footer">
               <button className="cancel-btn" onClick={() => setShowSettings(false)}>Cancel</button>
@@ -1457,6 +1942,30 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* [INSPECTOR START] */}
+      <InspectorPanel
+        isOpen={showInspector}
+        onClose={() => setShowInspector(false)}
+        traces={traces}
+        sessionId={sessionId}
+        API={API}
+        onRefresh={fetchTraces}
+      />
+      {/* [INSPECTOR END] */}
+      {/* [3D-MODE START] */}
+      {threeFallbackToast && (
+        <div className="three-fallback-toast" role="alert">
+          <span>⚠️ {threeFallbackToast}</span>
+          <button
+            className="toast-close"
+            onClick={() => setThreeFallbackToast(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {/* [3D-MODE END] */}
     </div>
   );
 }
