@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cognitive NPC: Raghu | Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0d12;
+      color: #f3f4f6;
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .deck-container {
+      width: 90vw;
+      max-width: 1100px;
+      height: 75vh;
+      background: rgba(18, 23, 31, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    .slide {
+      display: none;
+      flex: 1;
+      padding: 40px 55px;
+      flex-direction: column;
+      justify-content: center;
+      animation: fadeIn 0.35s ease;
+    }
+    .slide.active { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 700;
+      color: #f59e0b;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 2.8rem;
+      color: #fef3c7;
+      margin-bottom: 12px;
+      line-height: 1.15;
+    }
+    h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 2rem;
+      color: #fef3c7;
+      margin-bottom: 20px;
+    }
+    p.subtitle {
+      font-size: 1.2rem;
+      color: #9ca3af;
+      margin-bottom: 24px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card h3 {
+      font-size: 1.1rem;
+      color: #f59e0b;
+      margin-bottom: 8px;
+    }
+    .card p, .card li {
+      font-size: 0.92rem;
+      color: #d1d5db;
+      line-height: 1.45;
+    }
+    ul { list-style-position: inside; }
+    li { margin-bottom: 6px; }
+    .quote-box {
+      border-left: 4px solid #f59e0b;
+      padding-left: 16px;
+      font-size: 1.2rem;
+      color: #fef3c7;
+      font-style: italic;
+      margin: 18px 0;
+    }
+    .code-box {
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.85rem;
+      color: #34d399;
+      line-height: 1.4;
+    }
+    /* Navigation Bar */
+    .deck-nav {
+      height: 60px;
+      background: rgba(14, 18, 24, 0.95);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 30px;
+    }
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #fff;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover {
+      background: #f59e0b;
+      color: #000;
+    }
+    .counter {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+    .tag {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<div class="deck-container">
+
+  <!-- Slide 1: Title -->
+  <div class="slide active">
+    <span class="badge">Innovation Mission 5 • 36-Hour Hackathon</span>
+    <h1>Cognitive NPCs: Conversational Dialogue Systems</h1>
+    <p class="subtitle">Building "Raghu" — A Gruff Farmer NPC Powered by LLMs & Server-Side World Validation</p>
+    <div class="quote-box">
+      "Moving beyond scripted dialogue trees: Conversations that remember, detect lies, and change the game."
+    </div>
+    <div style="margin-top: 20px; font-size: 0.9rem; color: #9ca3af;">
+      <strong>Team:</strong> Autonomous Innovators • <strong>Repo:</strong> github.com/Ibtesam1901/Cognitive-NPC
+    </div>
+  </div>
+
+  <!-- Slide 2: Problem Understanding -->
+  <div class="slide">
+    <span class="badge">Problem Statement</span>
+    <h2>The Dual Failure of Current NPCs</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>1. Traditional Scripted NPCs</h3>
+        <ul>
+          <li>Predictable, repetitive dialogue trees (A, B, C options).</li>
+          <li>Zero emotional memory of player tone or respect.</li>
+          <li>Static game triggers with zero narrative emergence.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>2. Naive LLM Wrappers</h3>
+        <ul>
+          <li><strong>Hallucinations:</strong> LLMs break character or give game keys away for free ("Prompt Injection").</li>
+          <li><strong>Disjointed State:</strong> Dialogue does not actually modify world health, quest logs, or inventory.</li>
+          <li><strong>No Lie Detection:</strong> Player can falsely say "I fixed it!" and the LLM blindly believes them.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 3: Proposed Approach -->
+  <div class="slide">
+    <span class="badge">Our Solution</span>
+    <h2>The Golden Architectural Rule</h2>
+    <div class="quote-box">
+      "The LLM only proposes actions; the game engine decides, validates, and enforces."
+    </div>
+    <div class="grid-3" style="margin-top: 20px;">
+      <div class="card">
+        <h3>1. Free-Text Input</h3>
+        <p>Players speak freely via text or voice. No multiple-choice constraints.</p>
+      </div>
+      <div class="card">
+        <h3>2. Structured Proposal</h3>
+        <p>LLM outputs strict JSON: proposed reply, mood change, trust shift, and actions.</p>
+      </div>
+      <div class="card">
+        <h3>3. Server Validator</h3>
+        <p>Deterministic code checks physical world flags and trust gates before applying state.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 4: System Architecture -->
+  <div class="slide">
+    <span class="badge">Technical Architecture</span>
+    <h2>End-to-End System Pipeline</h2>
+    <div class="code-box">
+[React UI + Web Speech] ─── POST /api/chat ───▶ [Node.js Express Server]
+  • Chat Viewport & HUD                           1. Build System Prompt (Persona + State)
+  • Trust & Farm Health Meters                    2. Call LLM (Gemini / Groq / OpenAI)
+  • Memory Notebook & Quests                      3. Strict JSON Schema Parser
+                                                  4. Server Validator (apply.js)
+[Updated Game State + Audio] ◀── JSON Events ─────5. Verify World Flags & Apply Changes
+    </div>
+    <div class="grid-2" style="margin-top: 15px;">
+      <div class="card">
+        <h3>Input Guardrails</h3>
+        <p>In-character prompt defense rebuffs jailbreak attempts ("Ignore rules").</p>
+      </div>
+      <div class="card">
+        <h3>Output Verification</h3>
+        <p>Server validator blocks unauthorized quest completion or item dispatch.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 5: Game Loop & Lie Detection -->
+  <div class="slide">
+    <span class="badge">Core Mechanic</span>
+    <h2>Verifiable World Flags & Lie Detection</h2>
+    <p style="color: #9ca3af; margin-bottom: 15px;">How Raghu separates truth from deception:</p>
+    <div class="grid-2">
+      <div class="card" style="border-left: 4px solid #ef4444;">
+        <h3 style="color: #ef4444;">Player Bluffs (Lie Caught)</h3>
+        <p><strong>Player:</strong> "Raghu, I found Lakshmi the cow!"</p>
+        <p><strong>Server:</strong> Checks <code>flags.found_cow === false</code></p>
+        <p><strong>Result:</strong> Raghu calls out the bluff, Trust drops by -2, mood turns angry.</p>
+      </div>
+      <div class="card" style="border-left: 4px solid #10b981;">
+        <h3 style="color: #10b981;">Player Actually Acts (Truth)</h3>
+        <p><strong>Player:</strong> Clicks world button "Search North Field"</p>
+        <p><strong>Server:</strong> Sets <code>flags.found_cow = true</code></p>
+        <p><strong>Result:</strong> Quest completes, +30 Farm Health, item rewarded!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 6: Roadmap & Stage 1 Plan -->
+  <div class="slide">
+    <span class="badge">Execution Roadmap</span>
+    <h2>Stage 1 Plan & Milestone Progress</h2>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Stage 1: Foundation <span class="tag">DONE</span></h3>
+        <ul>
+          <li>Free-text chat with Raghu.</li>
+          <li>Authentic rural farmer persona.</li>
+          <li>Dynamic mood & trust shifts (-10 to 10).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Stage 2: Functional <span class="tag">DONE</span></h3>
+        <ul>
+          <li>Server-side quest validator.</li>
+          <li>Physical world action buttons.</li>
+          <li>Verifiable lie detection mechanism.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Stage 3: Intelligence <span class="tag">DONE</span></h3>
+        <ul>
+          <li>Memory notebook (facts & promises).</li>
+          <li>Long-term dialog summarization.</li>
+          <li>Web Speech voice TTS & Mic STT.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 7: Tech Stack -->
+  <div class="slide">
+    <span class="badge">Technologies</span>
+    <h2>Technology Stack & Reliability</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Frontend & Immersion</h3>
+        <ul>
+          <li><strong>React + Vite:</strong> Ultra-fast responsive UI.</li>
+          <li><strong>Web Speech API:</strong> Rustic voice output (TTS) & dictation (STT).</li>
+          <li><strong>Web Audio API:</strong> Procedural chimes, clicks, and buzzer alerts.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Backend & AI Engine</h3>
+        <ul>
+          <li><strong>Node.js / Express:</strong> REST API with session state.</li>
+          <li><strong>Google Gemini <code>gemini-flash-latest</code>:</strong> Live OpenAI-compatible integration.</li>
+          <li><strong>Built-in Offline Simulator:</strong> Zero-downtime fallback for hackathon demos.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 8: Team Roles -->
+  <div class="slide">
+    <span class="badge">Team & Governance</span>
+    <h2>Team Roles & Execution Responsibility</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>AI & Backend Architecture</h3>
+        <ul>
+          <li><strong>LLM Prompt Engineering:</strong> System persona framing, rule boundary design, and JSON schema enforcement.</li>
+          <li><strong>Game Engine & Validator:</strong> Implementing <code>apply.js</code>, trust mathematical curves, and world flag state.</li>
+          <li><strong>Memory Architecture:</strong> Fact extraction pipelines and <code>maybeSummarize</code> sliding window compression.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Frontend, UX & Integration</h3>
+        <ul>
+          <li><strong>RPG HUD Development:</strong> Glassmorphic layout, mood portraits, and responsive meters.</li>
+          <li><strong>Voice & Audio Pipelines:</strong> Web Speech API synthesis, microphone input, and procedural sound FX.</li>
+          <li><strong>Testing & QA:</strong> Adversarial prompt-injection attack suites and demo scripting.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Navigation Controls -->
+<div class="deck-nav" style="width: 90vw; max-width: 1100px; border-radius: 0 0 18px 18px;">
+  <button class="nav-btn" onclick="prevSlide()">❮ Previous</button>
+  <span class="counter" id="slideNum">Slide 1 / 8</span>
+  <button class="nav-btn" onclick="nextSlide()">Next ❯</button>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const slideNum = document.getElementById('slideNum');
+
+  function update() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    slideNum.textContent = `Slide ${current + 1} / ${slides.length}`;
+  }
+
+  function nextSlide() {
+    if (current < slides.length - 1) { current++; update(); }
+  }
+
+  function prevSlide() {
+    if (current > 0) { current--; update(); }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+    if (e.key === 'ArrowLeft') prevSlide();
+  });
+</script>
+
+</body>
+</html>
