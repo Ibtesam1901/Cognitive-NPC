@@ -9,23 +9,8 @@ import { callLLM } from "./llmClient.js";
 import { validateNpcOutput } from "./validator.js";
 import { fallbackBrain } from "./fallbackBrain.js";
 import { applyActions, clamp } from "./gameEngine.js";
+import { summarizeConversation } from "./summarizer.js";
 
-// Rolling summarizer every ~8 turns
-function maybeSummarize(state) {
-  if (!state.memory.recent || state.memory.recent.length < 8) return;
-
-  const topics = [];
-  if (state.memory.facts.length > 0) {
-    topics.push(`Player facts noted: ${state.memory.facts.slice(-3).join("; ")}`);
-  }
-  const completedQuests = state.quests.filter((q) => q.status === "completed").map((q) => q.title);
-  if (completedQuests.length > 0) {
-    topics.push(`Completed work: ${completedQuests.join(", ")}`);
-  }
-  topics.push(`Current farm trust is ${state.npc.trust} with Raghu feeling ${state.npc.mood}.`);
-
-  state.memory.summary = `Conversation recap: ${topics.join(". ")}`;
-}
 
 export async function handleTurn(sessionId, message, config = {}) {
   const state = load(sessionId);
@@ -87,8 +72,12 @@ export async function handleTurn(sessionId, message, config = {}) {
     state.memory.recent = state.memory.recent.slice(-8);
   }
 
-  // 6. Rolling summary
-  maybeSummarize(state);
+  // 6. Rolling summary (every ~8 turns or on initial conversation)
+  state.memory.turnCount = (state.memory.turnCount || 0) + 1;
+  if (state.memory.turnCount % 8 === 0 || !state.memory.summary) {
+    await summarizeConversation(state, config);
+  }
+
 
   // 7. Save to disk store
   save(sessionId, state);

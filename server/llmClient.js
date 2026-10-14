@@ -1,6 +1,7 @@
 /**
  * LLM Client for calling OpenAI-compatible APIs (Gemini, Groq, OpenAI, Ollama).
- * Forces JSON output, handles timeouts (12s), and safely handles network errors.
+ * Supports JSON mode, temperature tuning (0.7 for personality, 0.2 for summarizer),
+ * handles timeouts (12s), and safely handles network errors.
  */
 
 import OpenAI from "openai";
@@ -23,28 +24,32 @@ export function getClient(overrideConfig = {}) {
   });
 }
 
-export async function callLLM(messages, config = {}, timeoutMs = 12000) {
+export async function callLLM(messages, config = {}, timeoutMs = 12000, options = {}) {
   const client = getClient(config);
   if (!client) {
     throw new Error("No API key configured (using fallback brain)");
   }
 
   const model = config.model || process.env.LLM_MODEL || "gemini-flash-latest";
+  const temperature = options.temperature !== undefined ? options.temperature : 0.7;
+  const jsonMode = options.jsonMode !== undefined ? options.jsonMode : true;
+  const maxTokens = options.maxTokens || 350;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await client.chat.completions.create(
-      {
-        model,
-        messages,
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-        max_tokens: 350,
-      },
-      { signal: controller.signal }
-    );
+    const params = {
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    };
+    if (jsonMode) {
+      params.response_format = { type: "json_object" };
+    }
+
+    const res = await client.chat.completions.create(params, { signal: controller.signal });
 
     clearTimeout(timer);
     const content = res.choices?.[0]?.message?.content;
