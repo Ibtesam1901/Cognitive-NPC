@@ -164,186 +164,215 @@
 
 <div class="deck-container">
 
-  <!-- Slide 1: Title -->
+  <!-- Slide 1: Title Slide -->
   <div class="slide active">
     <span class="badge">Innovation Mission 5 • 36-Hour Hackathon</span>
-    <h1>Cognitive NPCs: Conversational Dialogue Systems</h1>
-    <p class="subtitle">Building "Raghu" — A Gruff Farmer NPC Powered by LLMs & Server-Side World Validation</p>
+    <h1>Raghu, the Cognitive Farmer</h1>
+    <p class="subtitle">Mission 5: Cognitive NPCs — Dynamic Conversational Dialogue & World-Changing State</p>
     <div class="quote-box">
-      "Moving beyond scripted dialogue trees: Conversations that remember, detect lies, and change the game."
+      "Moving beyond static dialogue trees: An autonomous NPC with memory, emotional perception, and server-enforced world actions."
     </div>
-    <div style="margin-top: 20px; font-size: 0.9rem; color: #9ca3af;">
-      <strong>Team:</strong> Autonomous Innovators • <strong>Repo:</strong> github.com/Ibtesam1901/Cognitive-NPC
+    <div style="margin-top: 25px; display: flex; justify-content: space-between; font-size: 0.95rem; color: #9ca3af; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+      <div><strong>Team:</strong> Autonomous Innovators</div>
+      <div><strong>Repo:</strong> github.com/Ibtesam1901/Cognitive-NPC</div>
+      <div><strong>Live Demo:</strong> localhost:5173</div>
     </div>
   </div>
 
   <!-- Slide 2: Problem Understanding -->
   <div class="slide">
-    <span class="badge">Problem Statement</span>
-    <h2>The Dual Failure of Current NPCs</h2>
-    <div class="grid-2">
+    <span class="badge">Problem Understanding</span>
+    <h2>The Limits of Game Dialogue & Why It Matters</h2>
+    <div class="grid-3">
       <div class="card">
-        <h3>1. Traditional Scripted NPCs</h3>
+        <h3 style="color: #ef4444;">1. The Core Problem</h3>
         <ul>
-          <li>Predictable, repetitive dialogue trees (A, B, C options).</li>
-          <li>Zero emotional memory of player tone or respect.</li>
-          <li>Static game triggers with zero narrative emergence.</li>
+          <li>Traditional NPCs rely on rigid, pre-scripted dialogue trees.</li>
+          <li>Characters repeat themselves, forget player identity, and cannot adapt.</li>
+          <li>Player dialogue does not actually change physical world state.</li>
         </ul>
       </div>
       <div class="card">
-        <h3>2. Naive LLM Wrappers</h3>
+        <h3 style="color: #f59e0b;">2. Why It Matters</h3>
         <ul>
-          <li><strong>Hallucinations:</strong> LLMs break character or give game keys away for free ("Prompt Injection").</li>
-          <li><strong>Disjointed State:</strong> Dialogue does not actually modify world health, quest logs, or inventory.</li>
-          <li><strong>No Lie Detection:</strong> Player can falsely say "I fixed it!" and the LLM blindly believes them.</li>
+          <li>Static NPCs break player immersion and destroy replayability.</li>
+          <li>Indie/small studios cannot hand-write 10,000+ branching lines.</li>
+          <li>Games lack genuine emergent storytelling and emotional depth.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color: #10b981;">3. Scope & Assumptions</h3>
+        <ul>
+          <li><strong>Scope:</strong> One deeply fleshed-out NPC ("Raghu"), one rural drought farm scenario, free-text + voice.</li>
+          <li><strong>Assumptions:</strong> LLM API availability and sub-3s response latency.</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- Slide 3: Proposed Approach -->
+  <!-- Slide 3: Proposed Solution -->
   <div class="slide">
-    <span class="badge">Our Solution</span>
-    <h2>The Golden Architectural Rule</h2>
-    <div class="quote-box">
-      "The LLM only proposes actions; the game engine decides, validates, and enforces."
-    </div>
-    <div class="grid-3" style="margin-top: 20px;">
+    <span class="badge">Proposed Solution</span>
+    <h2>Conversational Dialogue Driving Game Mechanics</h2>
+    <div class="grid-3">
       <div class="card">
-        <h3>1. Free-Text Input</h3>
-        <p>Players speak freely via text or voice. No multiple-choice constraints.</p>
+        <h3>💡 Project Idea</h3>
+        <p>A web RPG where players converse with Raghu in natural language (EN/Hindi/Hinglish) with synchronized 2D lip movement and contextual hand gestures.</p>
       </div>
       <div class="card">
-        <h3>2. Structured Proposal</h3>
-        <p>LLM outputs strict JSON: proposed reply, mood change, trust shift, and actions.</p>
+        <h3>⚙️ How It Works</h3>
+        <p>Player input + Raghu's persona + historical memory + world state are passed to the LLM. The reply returns dialogue plus structured game actions (quests, trust, inventory).</p>
       </div>
       <div class="card">
-        <h3>3. Server Validator</h3>
-        <p>Deterministic code checks physical world flags and trust gates before applying state.</p>
+        <h3>🎯 Minimum Deliverable</h3>
+        <p>Free-text and voice conversation in character, unlocking quests, verifying real world actions, and visibly restoring the parched farm field state.</p>
       </div>
     </div>
   </div>
 
-  <!-- Slide 4: System Architecture -->
+  <!-- Slide 4: Architecture (Inputs -> Processing -> Outputs) -->
   <div class="slide">
-    <span class="badge">Technical Architecture</span>
-    <h2>End-to-End System Pipeline</h2>
+    <span class="badge">System Architecture</span>
+    <h2>Inputs ➔ Processing ➔ Outputs Flow</h2>
     <div class="code-box">
-[React UI + Web Speech] ─── POST /api/chat ───▶ [Node.js Express Server]
-  • Chat Viewport & HUD                           1. Build System Prompt (Persona + State)
-  • Trust & Farm Health Meters                    2. Call LLM (Gemini / Groq / OpenAI)
-  • Memory Notebook & Quests                      3. Strict JSON Schema Parser
-                                                  4. Server Validator (apply.js)
-[Updated Game State + Audio] ◀── JSON Events ─────5. Verify World Flags & Apply Changes
+[INPUTS] ───▶ [PROCESSING] ───▶ [OUTPUTS]
+• Typed Text or Voice (STT)      • Express Server Pipeline        • Dialogue Text & Voice (TTS)
+• In-Game World Actions         • Prompt Builder (Persona+Memory) • 2D Lips Movement & Gestures
+• Rain, Gifts, Puzzles          • Gemini Flash / Fallback Engine • Quests & Farm Health (0-100%)
+• Verification Flags            • Strict Action Parser & Guards  • Trust Meter (-10 to +10)
     </div>
     <div class="grid-2" style="margin-top: 15px;">
       <div class="card">
-        <h3>Input Guardrails</h3>
-        <p>In-character prompt defense rebuffs jailbreak attempts ("Ignore rules").</p>
+        <h3>Deterministic Action Parser</h3>
+        <p>The LLM proposes actions; the server validates physical prerequisites before mutating state.</p>
       </div>
       <div class="card">
-        <h3>Output Verification</h3>
-        <p>Server validator blocks unauthorized quest completion or item dispatch.</p>
+        <h3>Anti-Injection & Lie Detection</h3>
+        <p>Catches dishonest claims ("I found your cow") against server flags; rejects prompt injections.</p>
       </div>
     </div>
   </div>
 
-  <!-- Slide 5: Game Loop & Lie Detection -->
+  <!-- Slide 5: Technology and Resources -->
   <div class="slide">
-    <span class="badge">Core Mechanic</span>
-    <h2>Verifiable World Flags & Lie Detection</h2>
-    <p style="color: #9ca3af; margin-bottom: 15px;">How Raghu separates truth from deception:</p>
-    <div class="grid-2">
-      <div class="card" style="border-left: 4px solid #ef4444;">
-        <h3 style="color: #ef4444;">Player Bluffs (Lie Caught)</h3>
-        <p><strong>Player:</strong> "Raghu, I found Lakshmi the cow!"</p>
-        <p><strong>Server:</strong> Checks <code>flags.found_cow === false</code></p>
-        <p><strong>Result:</strong> Raghu calls out the bluff, Trust drops by -2, mood turns angry.</p>
-      </div>
-      <div class="card" style="border-left: 4px solid #10b981;">
-        <h3 style="color: #10b981;">Player Actually Acts (Truth)</h3>
-        <p><strong>Player:</strong> Clicks world button "Search North Field"</p>
-        <p><strong>Server:</strong> Sets <code>flags.found_cow = true</code></p>
-        <p><strong>Result:</strong> Quest completes, +30 Farm Health, item rewarded!</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Slide 6: Roadmap & Stage 1 Plan -->
-  <div class="slide">
-    <span class="badge">Execution Roadmap</span>
-    <h2>Stage 1 Plan & Milestone Progress</h2>
+    <span class="badge">Tech Stack & Resources</span>
+    <h2>Lean, Zero-Special-Hardware Architecture</h2>
     <div class="grid-3">
       <div class="card">
-        <h3>Stage 1: Foundation <span class="tag">DONE</span></h3>
+        <h3>💻 Hardware</h3>
         <ul>
-          <li>Free-text chat with Raghu.</li>
-          <li>Authentic rural farmer persona.</li>
-          <li>Dynamic mood & trust shifts (-10 to 10).</li>
+          <li>Standard laptops.</li>
+          <li>Built-in microphone & speaker.</li>
+          <li>No specialized GPUs or headsets required.</li>
         </ul>
       </div>
       <div class="card">
-        <h3>Stage 2: Functional <span class="tag">DONE</span></h3>
+        <h3>🛠️ Software & APIs</h3>
         <ul>
-          <li>Server-side quest validator.</li>
-          <li>Physical world action buttons.</li>
-          <li>Verifiable lie detection mechanism.</li>
+          <li><strong>Frontend:</strong> React (Vite), HTML5, Canvas Confetti.</li>
+          <li><strong>Backend:</strong> Node.js, Express.js.</li>
+          <li><strong>AI & Voice:</strong> Google Gemini API, Web Speech API.</li>
+          <li><strong>VCS:</strong> Git & GitHub.</li>
         </ul>
       </div>
       <div class="card">
-        <h3>Stage 3: Intelligence <span class="tag">DONE</span></h3>
+        <h3>📂 Data & Assets</h3>
         <ul>
-          <li>Memory notebook (facts & promises).</li>
-          <li>Long-term dialog summarization.</li>
-          <li>Web Speech voice TTS & Mic STT.</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- Slide 7: Tech Stack -->
-  <div class="slide">
-    <span class="badge">Technologies</span>
-    <h2>Technology Stack & Reliability</h2>
-    <div class="grid-2">
-      <div class="card">
-        <h3>Frontend & Immersion</h3>
-        <ul>
-          <li><strong>React + Vite:</strong> Ultra-fast responsive UI.</li>
-          <li><strong>Web Speech API:</strong> Rustic voice output (TTS) & dictation (STT).</li>
-          <li><strong>Web Audio API:</strong> Procedural chimes, clicks, and buzzer alerts.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>Backend & AI Engine</h3>
-        <ul>
-          <li><strong>Node.js / Express:</strong> REST API with session state.</li>
-          <li><strong>Google Gemini <code>gemini-flash-latest</code>:</strong> Live OpenAI-compatible integration.</li>
-          <li><strong>Built-in Offline Simulator:</strong> Zero-downtime fallback for hackathon demos.</li>
+          <li>Persona prompt & Bhima's Hollow lore.</li>
+          <li>Quest script & JSON memory store.</li>
+          <li>Free-tier API keys.</li>
+          <li>Zero large training datasets required.</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- Slide 8: Team Roles -->
+  <!-- Slide 6: Feasibility and Risks -->
   <div class="slide">
-    <span class="badge">Team & Governance</span>
-    <h2>Team Roles & Execution Responsibility</h2>
+    <span class="badge">Feasibility & Risk Mitigation</span>
+    <h2>Robustness, Latency & Fallback Engineering</h2>
+    <div class="grid-3">
+      <div class="card">
+        <h3 style="color: #38bdf8;">Key Assumptions</h3>
+        <ul>
+          <li>Stable internet connectivity at the presentation venue.</li>
+          <li>Free-tier API rate limits accommodate demo traffic.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-left: 3px solid #ef4444;">
+        <h3 style="color: #ef4444;">Identified Risks</h3>
+        <ul>
+          <li><strong>LLM Latency & Outages:</strong> Slow API response.</li>
+          <li><strong>Jailbreaks:</strong> Player forces NPC to break character.</li>
+          <li><strong>Malformed JSON:</strong> Unreliable structured output.</li>
+          <li><strong>Voice Synthesis Glitches:</strong> Inconsistent browser TTS.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-left: 3px solid #10b981;">
+        <h3 style="color: #10b981;">Engineered Backup Plan</h3>
+        <ul>
+          <li><strong>Rule-Based Offline Engine:</strong> Instant fallback simulation.</li>
+          <li><strong>Provider Switcher:</strong> In-app API key & endpoint toggle.</li>
+          <li><strong>Scripted Demo Chips:</strong> 1-click verified test buttons.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 7: 36-Hour Build Plan & Team Roles -->
+  <div class="slide">
+    <span class="badge">Execution Roadmap</span>
+    <h2>36-Hour Build Plan & Team Distribution</h2>
     <div class="grid-2">
       <div class="card">
-        <h3>AI & Backend Architecture</h3>
-        <ul>
-          <li><strong>LLM Prompt Engineering:</strong> System persona framing, rule boundary design, and JSON schema enforcement.</li>
-          <li><strong>Game Engine & Validator:</strong> Implementing <code>apply.js</code>, trust mathematical curves, and world flag state.</li>
-          <li><strong>Memory Architecture:</strong> Fact extraction pipelines and <code>maybeSummarize</code> sliding window compression.</li>
+        <h3>Chronological Build Phases</h3>
+        <ul style="font-size: 0.85rem; line-height: 1.5;">
+          <li><strong>Hours 0–8 (Foundation):</strong> Chat UI, Express endpoints, LLM API connection, Raghu's persona prompt.</li>
+          <li><strong>Hours 8–20 (Core Build):</strong> Quest state machine, action parsing, field recovery mechanics, inventory.</li>
+          <li><strong>Hours 20–30 (Integration):</strong> Memory store, trust/mood dynamics, voice TTS/STT, 2D lip sync & gestures.</li>
+          <li><strong>Hours 30–36 (Polish & Test):</strong> Edge case jailbreaks, lie detection tests, demo scripting, deck prep.</li>
         </ul>
       </div>
       <div class="card">
-        <h3>Frontend, UX & Integration</h3>
+        <h3>Team Responsibilities</h3>
+        <ul style="font-size: 0.85rem; line-height: 1.5;">
+          <li><strong>Frontend Engineer:</strong> React UI, glassmorphic HUD, sound FX, 2D sprite lip sync.</li>
+          <li><strong>Backend & LLM Engineer:</strong> Prompt engineering, Gemini API pipeline, fallback engine.</li>
+          <li><strong>Game Logic & Systems:</strong> State validator, lie detection flags, quest state machine.</li>
+          <li><strong>QA & Demo Lead:</strong> Prompt injection attacks, demo flow, presentation delivery.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 8: Expected Outcomes & Guidance Needed -->
+  <div class="slide">
+    <span class="badge">Outcomes & Evaluation</span>
+    <h2>Success Criteria, Live Demo Flow & Jury Inquiries</h2>
+    <div class="grid-3">
+      <div class="card">
+        <h3 style="color: #10b981;">✅ Success Criteria</h3>
         <ul>
-          <li><strong>RPG HUD Development:</strong> Glassmorphic layout, mood portraits, and responsive meters.</li>
-          <li><strong>Voice & Audio Pipelines:</strong> Web Speech API synthesis, microphone input, and procedural sound FX.</li>
-          <li><strong>Testing & QA:</strong> Adversarial prompt-injection attack suites and demo scripting.</li>
+          <li>Replies consistently in character to open free-text.</li>
+          <li>Dialogue visibly updates quests, trust, and field state.</li>
+          <li>Remembers player promises and past actions.</li>
+          <li>Sub-3-second average response latency.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color: #f59e0b;">🎬 90-Second Demo Plan</h3>
+        <ul>
+          <li><strong>1. Greet:</strong> Introduce yourself in English or Hindi.</li>
+          <li><strong>2. Lie Test:</strong> Claim cow is found ➔ caught bluffing!</li>
+          <li><strong>3. Build Trust:</strong> Solve valve puzzle or make sincere promise.</li>
+          <li><strong>4. Quest:</strong> Receive seeds ➔ restore Bhima's Hollow field!</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color: #a855f7;">❓ Jury Guidance Needed</h3>
+        <ul>
+          <li>Do judges prioritize a pure LLM approach vs. hybrid server-validated reliability?</li>
+          <li>How heavily is Stage 3 long-term memory weighted against visual game actions?</li>
         </ul>
       </div>
     </div>
