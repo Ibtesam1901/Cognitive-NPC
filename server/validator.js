@@ -3,7 +3,7 @@
  * Ensures the model output strictly satisfies the contract without external dependencies.
  */
 
-const ALLOWED_EMOTIONS = ["happy", "neutral", "annoyed", "worried"];
+const ALLOWED_EMOTIONS = ["happy", "neutral", "annoyed", "worried", "proud"];
 const ALLOWED_ACTION_TYPES = [
   "OFFER_QUEST",
   "ADVANCE_QUEST",
@@ -12,7 +12,8 @@ const ALLOWED_ACTION_TYPES = [
   "SET_PRICE",
   "CHANGE_WEATHER",
 ];
-const ALLOWED_WEATHERS = ["clear", "rain", "drought", "overcast"];
+const ALLOWED_ITEMS = ["seeds", "water_can", "fertilizer"];
+const ALLOWED_WEATHERS = ["clear", "rain"];
 
 export function validateNpcOutput(raw) {
   if (!raw) {
@@ -36,7 +37,7 @@ export function validateNpcOutput(raw) {
   }
   const reply = data.reply.trim();
 
-  // 2. Validate emotion
+  // 2. Validate emotion (happy | neutral | annoyed | worried | proud)
   let emotion = "neutral";
   if (typeof data.emotion === "string" && ALLOWED_EMOTIONS.includes(data.emotion.toLowerCase())) {
     emotion = data.emotion.toLowerCase();
@@ -48,13 +49,13 @@ export function validateNpcOutput(raw) {
     trust_delta = Math.max(-2, Math.min(2, Math.round(data.trust_delta)));
   }
 
-  // 4. Validate memory_facts (array of strings, max 5 per turn)
+  // 4. Validate memory_facts (array of strings, max 2 durable facts)
   let memory_facts = [];
   if (Array.isArray(data.memory_facts)) {
     memory_facts = data.memory_facts
       .filter((f) => typeof f === "string" && f.trim().length > 0)
       .map((f) => f.trim().slice(0, 120))
-      .slice(0, 5);
+      .slice(0, 2);
   }
 
   // 5. Validate actions
@@ -71,8 +72,10 @@ export function validateNpcOutput(raw) {
         if (a.id) actions.push({ type, id: String(a.id).trim() });
       } else if (type === "GIVE_ITEM") {
         const item = String(a.item || "seeds").toLowerCase().trim();
-        const qty = Math.max(1, Math.min(5, parseInt(a.qty, 10) || 1));
-        actions.push({ type, item, qty });
+        if (ALLOWED_ITEMS.includes(item)) {
+          const qty = Math.max(1, Math.min(3, parseInt(a.qty, 10) || 1));
+          actions.push({ type, item, qty });
+        }
       } else if (type === "UNLOCK_PLOT") {
         const id = parseInt(a.id, 10);
         if (!isNaN(id) && id >= 1 && id <= 4) {
@@ -80,12 +83,12 @@ export function validateNpcOutput(raw) {
         }
       } else if (type === "SET_PRICE") {
         const crop = String(a.crop || "wheat").toLowerCase().trim();
-        const mult = Math.max(0.8, Math.min(1.5, parseFloat(a.mult) || 1.0));
+        const mult = Math.max(0.8, Math.min(1.3, parseFloat(a.mult) || 1.0));
         actions.push({ type, crop, mult: Number(mult.toFixed(2)) });
       } else if (type === "CHANGE_WEATHER") {
-        const w = String(a.w || a.weather || "clear").toLowerCase().trim();
+        const w = String(a.weather || a.w || "clear").toLowerCase().trim();
         if (ALLOWED_WEATHERS.includes(w)) {
-          actions.push({ type, w });
+          actions.push({ type, weather: w });
         }
       }
     }

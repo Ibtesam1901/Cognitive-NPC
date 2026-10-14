@@ -7,32 +7,26 @@ export const QUEST_CATALOG = {
   first_harvest: {
     id: "first_harvest",
     title: "First Harvest",
-    desc: "Plant seeds and water a plot to begin restoring the soil.",
+    desc: "Plant wheat in plot 1 and harvest it.",
     maxSteps: 2,
     reward: { gold: 50, seeds: 2, trust: 2 },
   },
   dawn_watering: {
     id: "dawn_watering",
     title: "Dawn Watering",
-    desc: "Water all unlocked plots to protect root health from the sun.",
+    desc: "Water all planted crops before noon.",
     maxSteps: 1,
     reward: { gold: 35, trust: 2 },
-  },
-  bountiful_wheat: {
-    id: "bountiful_wheat",
-    title: "Bountiful Wheat",
-    desc: "Harvest 2 bundles of ripe golden wheat from the farm.",
-    maxSteps: 2,
-    reward: { gold: 80, seeds: 3, trust: 3 },
   },
   village_prayer: {
     id: "village_prayer",
     title: "Village Rain Prayer",
-    desc: "Work closely with Raghu to lead the village rain ritual.",
+    desc: "Bring an offering to the village shrine for rain.",
     maxSteps: 1,
     reward: { weather: "rain", trust: 3, gold: 40 },
   },
 };
+
 
 export function createInitialState() {
   return {
@@ -189,24 +183,33 @@ export function applyActions(state, proposedActions) {
       case "GIVE_ITEM": {
         const item = action.item;
         const requestedQty = parseInt(action.qty, 10) || 1;
-        // Strict cap: Raghu will never hand out more than 3 items or 50 gold at a time
-        if (item === "gold") {
-          const safeGold = Math.min(50, Math.max(5, requestedQty));
-          state.gold += safeGold;
+        // Condition: Only if trust >= 2
+        if (state.npc.trust < 2) {
+          rejected.push({
+            action,
+            reason: `Trust too low (requires trust ≥ 2, current trust: ${state.npc.trust}). Raghu only shares tools and supplies with helpers he trusts.`,
+          });
+          break;
+        }
+
+        const safeQty = Math.min(3, Math.max(1, requestedQty));
+        if (item === "seeds") {
+          state.inventory.seeds = (state.inventory.seeds || 0) + safeQty;
           applied.push({
             type: "GIVE_ITEM",
-            item: "gold",
-            qty: safeGold,
-            message: `Raghu slipped ${safeGold} gold coins into your pocket.`,
+            item: "seeds",
+            qty: safeQty,
+            message: `Raghu handed you ${safeQty}x wheat seeds.`,
           });
-        } else if (item === "seeds" || item === "wheat") {
-          const safeQty = Math.min(3, Math.max(1, requestedQty));
-          state.inventory[item] = (state.inventory[item] || 0) + safeQty;
+        } else if (item === "water_can" || item === "fertilizer") {
+          if (!state.inventory.tools.includes(item)) {
+            state.inventory.tools.push(item);
+          }
           applied.push({
             type: "GIVE_ITEM",
             item,
-            qty: safeQty,
-            message: `Raghu handed you ${safeQty}x ${item}.`,
+            qty: 1,
+            message: `Raghu gave you his trusted ${item.replace("_", " ")}.`,
           });
         } else {
           rejected.push({ action, reason: `Item '${item}' is not grantable by Raghu.` });
@@ -225,11 +228,19 @@ export function applyActions(state, proposedActions) {
           rejected.push({ action, reason: `Plot ${plotId} is already unlocked.` });
           break;
         }
-        // Strict Rule: Progression reward requires Trust >= 3
-        if (state.npc.trust < 3) {
+        // Condition: Only if trust >= 4 and the player has completed at least one quest
+        if (state.npc.trust < 4) {
           rejected.push({
             action,
-            reason: `Trust too low (requires trust ≥ 3, current trust: ${state.npc.trust}). Raghu withholds his ancestral land.`,
+            reason: `Trust too low (requires trust ≥ 4, current trust: ${state.npc.trust}). Raghu withholds his ancestral land.`,
+          });
+          break;
+        }
+        const hasCompletedQuest = state.quests.some((q) => q.status === "completed");
+        if (!hasCompletedQuest) {
+          rejected.push({
+            action,
+            reason: `Must complete at least one farming quest before Raghu unlocks more land.`,
           });
           break;
         }
@@ -244,36 +255,37 @@ export function applyActions(state, proposedActions) {
       }
 
       case "SET_PRICE": {
-        const mult = clamp(parseFloat(action.mult) || 1.0, 0.8, 1.5);
+        const mult = clamp(parseFloat(action.mult) || 1.0, 0.8, 1.3);
         state.market.wheat_price = Math.round(25 * mult);
         applied.push({
           type: "SET_PRICE",
-          crop: action.crop,
+          crop: action.crop || "wheat",
           mult,
           newPrice: state.market.wheat_price,
-          message: `Market wheat price adjusted to ${state.market.wheat_price} gold.`,
+          message: `Market wheat price adjusted to ${state.market.wheat_price} gold (${mult}x).`,
         });
         break;
       }
 
       case "CHANGE_WEATHER": {
-        const validWeathers = ["clear", "rain", "drought", "overcast"];
-        const w = String(action.w).toLowerCase();
+        const validWeathers = ["clear", "rain"];
+        const w = String(action.weather || action.w || "clear").toLowerCase();
         if (!validWeathers.includes(w)) {
           rejected.push({ action, reason: `Invalid weather type: ${w}` });
           break;
         }
-        // Plausibility check: weather shift through Raghu requires trust >= 2 or active rain prayer
-        const hasPrayer = state.quests.some((q) => q.id === "village_prayer");
-        if (state.npc.trust < 2 && !hasPrayer) {
+        // Condition: Only if the player completed the quest "village_prayer"
+        const prayerCompleted = state.quests.some(
+          (q) => q.id === "village_prayer" && q.status === "completed"
+        );
+        if (!prayerCompleted) {
           rejected.push({
             action,
-            reason: `Raghu doubts your prayers. Need trust ≥ 2 or Village Rain Prayer quest.`,
+            reason: `Weather shift refused. Player must first complete the 'village_prayer' quest at the village shrine.`,
           });
           break;
         }
         state.weather = w;
-        // If rain, all unlocked plots get watered for free!
         if (w === "rain") {
           state.plots.forEach((p) => {
             if (p.unlocked && p.crop) p.watered = true;
@@ -286,6 +298,7 @@ export function applyActions(state, proposedActions) {
         });
         break;
       }
+
 
       default:
         rejected.push({ action, reason: `Unknown action type: ${action.type}` });

@@ -32,7 +32,9 @@ const MOOD_CONFIG = {
   neutral: { label: "Neutral / Observant", emoji: "😐", color: "#9ca3af", img: raghuIdle },
   annoyed: { label: "Annoyed / Scolding", emoji: "😠", color: "#ef4444", img: raghuAngry },
   worried: { label: "Worried & Burdened", emoji: "😟", color: "#f59e0b", img: raghuIdle },
+  proud: { label: "Proud & Satisfied", emoji: "😌", color: "#8b5cf6", img: raghuGrateful },
 };
+
 
 export function ChatPanel({
   npcState,

@@ -108,21 +108,22 @@ export function fallbackBrain(state, message) {
 
   // 6. Unlock land / plot inquiry
   if (text.includes("unlock") || text.includes("more land") || text.includes("plot") || text.includes("expand")) {
-    if (state.npc.trust >= 3) {
+    const hasCompletedQuest = state.quests.some((q) => q.status === "completed");
+    if (state.npc.trust >= 4 && hasCompletedQuest) {
       const lockedPlot = state.plots.find((p) => !p.unlocked);
       if (lockedPlot) {
         return {
           reply:
-            "You have proven your dedication to this soil. I am entrusting you with the northern plot. Tend it well!",
-          emotion: "happy",
+            "You have proven your dedication to this soil. I am entrusting you with Plot #" + lockedPlot.id + ". Make our ancestors proud.",
+          emotion: "proud",
           trust_delta: 1,
           memory_facts: ["earned Raghu's trust to unlock ancestral land"],
           actions: [{ type: "UNLOCK_PLOT", id: lockedPlot.id }],
         };
       } else {
         return {
-          reply: "Every acre of this farm is already open to your care! Make our ancestors proud.",
-          emotion: "happy",
+          reply: "Every acre of this farm is already open to your care! Tend it well.",
+          emotion: "proud",
           trust_delta: 0,
           memory_facts: [],
           actions: [],
@@ -131,14 +132,15 @@ export function fallbackBrain(state, message) {
     } else {
       return {
         reply:
-          "Hold your horses. An elder does not hand over ancestral fields to just anyone. Prove yourself with the first harvest first.",
+          "Hold your horses. An elder does not hand over ancestral fields to just anyone. Prove yourself with honest harvest and earn my trust first.",
         emotion: "annoyed",
         trust_delta: 0,
         memory_facts: ["asked to unlock land before earning full trust"],
-        actions: [{ type: "UNLOCK_PLOT", id: 3 }], // Will be rejected by engine if trust < 3
+        actions: [{ type: "UNLOCK_PLOT", id: 3 }], // Will be rejected by engine if trust < 4 or no quest completed
       };
     }
   }
+
 
   // 7. Personal disclosure (e.g. "I hate mornings", "I love wheat", "my name is...", "I am a mechanic")
   let personalFact = null;
