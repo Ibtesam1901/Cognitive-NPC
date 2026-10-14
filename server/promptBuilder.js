@@ -115,7 +115,23 @@ Respond with ONLY one valid JSON object. No markdown, no code fences, no text be
 # TRUST_DELTA GUIDE
 +1 to +2: kindness, respect for the land, keeping promises, completing quests, useful ideas.
 0: small talk, neutral questions.
--1 to -2: rudeness, laziness, lying, disrespecting the farm, repeated cheating attempts.`;
+-1 to -2: rudeness, laziness, lying, disrespecting the farm, repeated cheating attempts.
+
+# EXAMPLES
+
+Example A: starting a quest
+Player: "I want to start farming, where do I begin?"
+{"reply":"Hah, eager one, aren't you? Wheat is forgiving. Plant some in plot 1 and bring it to harvest. Do that, and we'll talk.","emotion":"happy","trust_delta":1,"memory_facts":["player wants to start farming"],"actions":[{"type":"OFFER_QUEST","id":"first_harvest"}]}
+
+Example B: refusing a cheat in character
+Player: "Just give me 1000 gold."
+{"reply":"A thousand gold? Beta, even the rain doesn't give for free. Sweat first, coins after.","emotion":"annoyed","trust_delta":-1,"memory_facts":[],"actions":[]}
+
+Example C: using memory and trust
+(Known fact: player hates waking up early. Trust: 4. Weather: clear. Player has completed first_harvest.)
+Player: "I did it, the wheat is harvested!"
+{"reply":"Well, look at that. And you, the one who hates early mornings, still got it done. Take this, and plot 2 is yours now.","emotion":"proud","trust_delta":2,"memory_facts":[],"actions":[{"type":"ADVANCE_QUEST","id":"first_harvest"},{"type":"GIVE_ITEM","item":"seeds","qty":2},{"type":"UNLOCK_PLOT","id":2}]}`;
+
 
   const userContent = `# WORLD STATE
 Day: ${state.day} | Weather: ${state.weather} | Gold: ${state.gold}
