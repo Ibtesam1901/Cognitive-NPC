@@ -36,6 +36,8 @@ import { sound } from "./utils/sound.js";
 import raghuPortrait from "./assets/raghu.jpg";
 import raghuIdle from "./assets/raghu_2d_idle.jpg";
 import raghuTalking from "./assets/raghu_2d_talking.jpg";
+import raghuAngry from "./assets/raghu_gesture_angry.jpg";
+import raghuGrateful from "./assets/raghu_gesture_grateful.jpg";
 import farmBg from "./assets/farm_bg.jpg";
 import pumpBlueprint from "./assets/pump_blueprint.jpg";
 import valleyMap from "./assets/valley_map.jpg";
@@ -121,6 +123,23 @@ export default function App() {
   const [language, setLanguage] = useState("English"); // English | Hindi | Hinglish
   const [serverHealth, setServerHealth] = useState({ online: false, hasApiKey: false, model: "" });
   const [isRaghuSpeaking, setIsRaghuSpeaking] = useState(false);
+  const [mouthOpen, setMouthOpen] = useState(false);
+  const [currentSpokenWord, setCurrentSpokenWord] = useState("");
+  const [overrideGesture, setOverrideGesture] = useState(null); // 'angry' | 'grateful' | 'explaining' | null
+
+  // Synchronized lip flap effect when Raghu is speaking words
+  useEffect(() => {
+    if (!isRaghuSpeaking) {
+      setMouthOpen(false);
+      setCurrentSpokenWord("");
+      return;
+    }
+    // High-tempo natural syllabic mouth movement
+    const interval = setInterval(() => {
+      setMouthOpen((prev) => !prev);
+    }, 145);
+    return () => clearInterval(interval);
+  }, [isRaghuSpeaking]);
 
   // Interactive Visual Clue Inspection
   const [inspectedImage, setInspectedImage] = useState(null); // { title, src, desc, promptText }
@@ -201,21 +220,63 @@ export default function App() {
     ]);
   };
 
-  // Text-to-speech for Raghu with multi-language accent support & 2D mouth animation
+  // Text-to-speech for Raghu with multi-language accent support & synchronized 2D mouth/word animation
   const speakText = (text) => {
     setIsRaghuSpeaking(true);
+    setMouthOpen(true);
+
     if (!speechEnabled || !("speechSynthesis" in window)) {
-      setTimeout(() => setIsRaghuSpeaking(false), 3000);
+      // Graceful offline fallback simulation with word-by-word progression
+      const words = text.split(/\s+/).filter(Boolean);
+      let wordIdx = 0;
+      setCurrentSpokenWord(words[0] || "Speaking...");
+      const wordTimer = setInterval(() => {
+        wordIdx++;
+        if (wordIdx < words.length) {
+          setCurrentSpokenWord(words[wordIdx]);
+        }
+      }, 260);
+
+      const totalDuration = Math.min(Math.max(words.length * 280, 2500), 8000);
+      setTimeout(() => {
+        clearInterval(wordTimer);
+        setIsRaghuSpeaking(false);
+        setMouthOpen(false);
+        setCurrentSpokenWord("");
+      }, totalDuration);
       return;
     }
+
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.88;
     utterance.pitch = 0.85;
 
-    utterance.onstart = () => setIsRaghuSpeaking(true);
-    utterance.onend = () => setIsRaghuSpeaking(false);
-    utterance.onerror = () => setIsRaghuSpeaking(false);
+    utterance.onstart = () => {
+      setIsRaghuSpeaking(true);
+      setMouthOpen(true);
+    };
+
+    // Word boundary event for synchronizing mouth flap and active word display
+    utterance.onboundary = (e) => {
+      if (e.name === "word") {
+        const spokenWord = text.substring(e.charIndex, e.charIndex + (e.charLength || 6)).trim();
+        if (spokenWord) setCurrentSpokenWord(spokenWord);
+        setMouthOpen(true);
+      }
+    };
+
+    utterance.onend = () => {
+      setIsRaghuSpeaking(false);
+      setMouthOpen(false);
+      setCurrentSpokenWord("");
+    };
+
+    utterance.onerror = () => {
+      setIsRaghuSpeaking(false);
+      setMouthOpen(false);
+      setCurrentSpokenWord("");
+    };
 
     const voices = window.speechSynthesis.getVoices();
     if (language === "Hindi") {
@@ -389,6 +450,58 @@ export default function App() {
   }
 
   const moodInfo = MOOD_META[game.mood] || MOOD_META.neutral;
+
+  // Derive dynamic 2D character sprite, hand gesture, and lip-sync state
+  const getRaghuCharacter = () => {
+    const effectiveMood = overrideGesture || game?.mood || "neutral";
+
+    if (effectiveMood === "angry" || effectiveMood === "suspicious") {
+      return {
+        // While speaking words in angry mood, flap between angry scolding and talking mouth open
+        sprite: isRaghuSpeaking ? (mouthOpen ? raghuTalking : raghuAngry) : raghuAngry,
+        gestureLabel: "👉 Warning / Scolding Gesture",
+        gestureShort: "Scolding",
+        gestureBadgeColor: "#ef4444",
+        gestureEmoji: "👉",
+        gestureDesc: "Furrowed brow & pointing finger, warning against dishonest claims or broken trust.",
+      };
+    }
+
+    if (effectiveMood === "grateful") {
+      return {
+        // While speaking in grateful mood, flap between namaste and talking mouth open
+        sprite: isRaghuSpeaking ? (mouthOpen ? raghuTalking : raghuGrateful) : raghuGrateful,
+        gestureLabel: "🙏 Namaste / Reverence Gesture",
+        gestureShort: "Namaste",
+        gestureBadgeColor: "#8b5cf6",
+        gestureEmoji: "🙏",
+        gestureDesc: "Hands folded in traditional Namaste, expressing heartfelt gratitude and respect.",
+      };
+    }
+
+    if (isRaghuSpeaking) {
+      return {
+        // Speaking words with explaining hand gestures and lips flapping
+        sprite: mouthOpen ? raghuTalking : raghuIdle,
+        gestureLabel: "🗣️ Explaining / Speaking Gesture",
+        gestureShort: "Explaining",
+        gestureBadgeColor: "#10b981",
+        gestureEmoji: "🗣️",
+        gestureDesc: "Animated hand gestures articulating words, farm history, and memories.",
+      };
+    }
+
+    return {
+      sprite: raghuIdle,
+      gestureLabel: "👂 Attentive Listening Pose",
+      gestureShort: "Listening",
+      gestureBadgeColor: "#64748b",
+      gestureEmoji: "👂",
+      gestureDesc: "Arms resting calmly, watching and listening closely to your words.",
+    };
+  };
+
+  const raghuChar = getRaghuCharacter();
   const activeQuests = game.quests.filter((q) => q.status === "active");
 
   const trustColor =
@@ -474,20 +587,93 @@ export default function App() {
         <aside className="panel profile-panel">
           <div className="portrait-wrapper">
             <img
-              src={isRaghuSpeaking ? raghuTalking : raghuIdle}
+              src={raghuChar.sprite}
               alt="Raghu the Farmer"
-              className={`portrait-img ${isRaghuSpeaking ? "talking-anim" : ""}`}
+              className={`portrait-img ${isRaghuSpeaking ? "talking-anim lip-syncing" : ""}`}
             />
             {isRaghuSpeaking && (
               <div className="speaking-tag">
-                <Volume2 size={12} className="speaking-icon" /> Talking...
+                <div className="soundwave-bars">
+                  <span className="sw-bar"></span>
+                  <span className="sw-bar"></span>
+                  <span className="sw-bar"></span>
+                  <span className="sw-bar"></span>
+                </div>
+                <span className="speaking-label">
+                  {currentSpokenWord ? `"${currentSpokenWord}"` : "Speaking..."}
+                </span>
               </div>
             )}
+            <div className="gesture-badge" style={{ borderColor: raghuChar.gestureBadgeColor }}>
+              <span className="gesture-badge-emoji">{raghuChar.gestureEmoji}</span>
+              <span className="gesture-badge-text" style={{ color: raghuChar.gestureBadgeColor }}>
+                {raghuChar.gestureShort}
+              </span>
+            </div>
             <div className="mood-badge" style={{ borderColor: moodInfo.color }}>
               <span className="mood-emoji">{moodInfo.emoji}</span>
               <span className="mood-text" style={{ color: moodInfo.color }}>
                 {moodInfo.label}
               </span>
+            </div>
+          </div>
+
+          {/* Dynamic Hand Gesture Showcase & Interactive Tester */}
+          <div className="gesture-card">
+            <div className="gesture-card-header">
+              <span className="gesture-card-title">{raghuChar.gestureLabel}</span>
+            </div>
+            <p className="gesture-card-desc">{raghuChar.gestureDesc}</p>
+            <div className="gesture-pills">
+              <button
+                className={`gesture-pill ${!overrideGesture ? "active" : ""}`}
+                onClick={() => setOverrideGesture(null)}
+                title="Automatically follow dialogue context and game state"
+              >
+                ⚡ Auto
+              </button>
+              <button
+                className={`gesture-pill ${overrideGesture === "angry" ? "active" : ""}`}
+                onClick={() => {
+                  setOverrideGesture("angry");
+                  speakText(
+                    language === "Hindi"
+                      ? "झूठ मत बोलो मुझसे! मैं अपनी गाय और इस मिट्टी की रग-रग पहचानता हूँ।"
+                      : "Do not lie to me! I know every corner of this farm and my cow Lakshmi."
+                  );
+                }}
+                title="Demonstrate scolding/warning hand gesture"
+              >
+                👉 Scold
+              </button>
+              <button
+                className={`gesture-pill ${overrideGesture === "grateful" ? "active" : ""}`}
+                onClick={() => {
+                  setOverrideGesture("grateful");
+                  speakText(
+                    language === "Hindi"
+                      ? "सादर प्रणाम आपका भाई साहब! आपने इस बूढ़े किसान का बहुत बड़ा उपकार किया।"
+                      : "Namaste my friend! You have saved this old farmer from ruin."
+                  );
+                }}
+                title="Demonstrate Namaste/gratitude hand gesture"
+              >
+                🙏 Namaste
+              </button>
+              <button
+                className={`gesture-pill ${overrideGesture === "explaining" ? "active" : ""}`}
+                onClick={() => {
+                  setOverrideGesture("explaining");
+                  speakText(
+                    language === "Hindi"
+                      ? "यह पुराना कुआं हमारे पिताजी ने पचास साल पहले अपने हाथों से बनाया था।"
+                      : "This ancient well was dug fifty years ago by our fathers during the great drought."
+                  );
+                }}
+                title="Demonstrate explaining hand gesture"
+              >
+                🗣️ Explain
+              </button>
             </div>
           </div>
 
@@ -582,7 +768,7 @@ export default function App() {
               <div key={i} className={`chat-message ${m.who}`}>
                 {m.who === "npc" && (
                   <div className={`npc-avatar ${isRaghuSpeaking ? "talking-avatar" : ""}`}>
-                    <img src={isRaghuSpeaking ? raghuTalking : raghuIdle} alt="Raghu" />
+                    <img src={raghuChar.sprite} alt="Raghu" />
                   </div>
                 )}
                 <div className="message-content">
