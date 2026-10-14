@@ -102,6 +102,27 @@ class SoundFX {
       // Audio node error handled gracefully
     }
   }
+
+  playPop() {
+    this.playClick();
+  }
+
+  playWater() {
+    this.playClick();
+  }
+
+  playPlant() {
+    this.playClick();
+  }
+
+  playHarvest() {
+    this.playChime();
+  }
+
+  playCoin() {
+    this.playChime();
+  }
 }
 
 export const sound = new SoundFX();
+

@@ -312,3 +312,6 @@ export async function speak(text, language = "English", options = {}) {
     fallbackSpeechSynthesis(cleanText, language, options);
   }
 }
+
+export { speak as playVoice, stop as stopVoice };
+

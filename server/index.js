@@ -17,11 +17,56 @@ import { getClient } from "./llm.js";
 import { generateSuggestions, getFallbackSuggestions } from "./suggest.js";
 // [SUGGESTIONS END]
 
+// [NPC SHAPES FARM START]
+import { handleTurn } from "./npcHandler.js";
+import { load as loadNpcState, save as saveNpcState, reset as resetNpcState } from "./memoryStore.js";
+import { handlePlayerFarmAction } from "./gameEngine.js";
+// [NPC SHAPES FARM END]
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*" }));
 app.use(express.json({ limit: "10mb" })); // Support base64 image uploads if needed
+
+// [NPC SHAPES FARM API ENDPOINTS]
+app.get("/api/npc/state", (req, res) => {
+  const sessionId = String(req.query.sessionId || "default");
+  const state = loadNpcState(sessionId);
+  res.json({ state });
+});
+
+app.post("/api/npc/chat", async (req, res) => {
+  const { sessionId, message, config } = req.body || {};
+  if (!sessionId || typeof message !== "string" || !message.trim()) {
+    return res.status(400).json({ error: "sessionId and message required" });
+  }
+
+  const result = await handleTurn(sessionId, message.trim().slice(0, 500), config);
+  res.json(result);
+});
+
+app.post("/api/npc/farm-action", (req, res) => {
+  const { sessionId, action, params } = req.body || {};
+  if (!sessionId || !action) {
+    return res.status(400).json({ error: "sessionId and action required" });
+  }
+
+  const state = loadNpcState(sessionId);
+  const result = handlePlayerFarmAction(state, action, params);
+  saveNpcState(sessionId, state);
+  res.json({ ...result, state });
+});
+
+app.post("/api/npc/reset", (req, res) => {
+  const sessionId = String(req.body?.sessionId || "default");
+  const state = resetNpcState(sessionId);
+  res.json({
+    message: "A new sunrise breaks over Bhima's Hollow. Raghu's farm is renewed.",
+    state,
+  });
+});
+
 
 const sessions = new Map(); // sessionId -> game state
 const sessionConfigs = new Map(); // sessionId -> custom LLM config { apiKey, baseURL, model }
