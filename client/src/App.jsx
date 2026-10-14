@@ -34,6 +34,8 @@ import {
 import confetti from "canvas-confetti";
 import { sound } from "./utils/sound.js";
 import raghuPortrait from "./assets/raghu.jpg";
+import raghuIdle from "./assets/raghu_2d_idle.jpg";
+import raghuTalking from "./assets/raghu_2d_talking.jpg";
 import farmBg from "./assets/farm_bg.jpg";
 import pumpBlueprint from "./assets/pump_blueprint.jpg";
 import valleyMap from "./assets/valley_map.jpg";
@@ -118,6 +120,7 @@ export default function App() {
   const [showGuide, setShowGuide] = useState(false);
   const [language, setLanguage] = useState("English"); // English | Hindi | Hinglish
   const [serverHealth, setServerHealth] = useState({ online: false, hasApiKey: false, model: "" });
+  const [isRaghuSpeaking, setIsRaghuSpeaking] = useState(false);
 
   // Interactive Visual Clue Inspection
   const [inspectedImage, setInspectedImage] = useState(null); // { title, src, desc, promptText }
@@ -198,13 +201,21 @@ export default function App() {
     ]);
   };
 
-  // Text-to-speech for Raghu with multi-language accent support
+  // Text-to-speech for Raghu with multi-language accent support & 2D mouth animation
   const speakText = (text) => {
-    if (!speechEnabled || !("speechSynthesis" in window)) return;
+    setIsRaghuSpeaking(true);
+    if (!speechEnabled || !("speechSynthesis" in window)) {
+      setTimeout(() => setIsRaghuSpeaking(false), 3000);
+      return;
+    }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.88;
     utterance.pitch = 0.85;
+
+    utterance.onstart = () => setIsRaghuSpeaking(true);
+    utterance.onend = () => setIsRaghuSpeaking(false);
+    utterance.onerror = () => setIsRaghuSpeaking(false);
 
     const voices = window.speechSynthesis.getVoices();
     if (language === "Hindi") {
@@ -462,7 +473,16 @@ export default function App() {
         {/* Left Column: Raghu's Profile & Stats */}
         <aside className="panel profile-panel">
           <div className="portrait-wrapper">
-            <img src={raghuPortrait} alt="Raghu the Farmer" className="portrait-img" />
+            <img
+              src={isRaghuSpeaking ? raghuTalking : raghuIdle}
+              alt="Raghu the Farmer"
+              className={`portrait-img ${isRaghuSpeaking ? "talking-anim" : ""}`}
+            />
+            {isRaghuSpeaking && (
+              <div className="speaking-tag">
+                <Volume2 size={12} className="speaking-icon" /> Talking...
+              </div>
+            )}
             <div className="mood-badge" style={{ borderColor: moodInfo.color }}>
               <span className="mood-emoji">{moodInfo.emoji}</span>
               <span className="mood-text" style={{ color: moodInfo.color }}>
@@ -561,8 +581,8 @@ export default function App() {
             {messages.map((m, i) => (
               <div key={i} className={`chat-message ${m.who}`}>
                 {m.who === "npc" && (
-                  <div className="npc-avatar">
-                    <img src={raghuPortrait} alt="Raghu" />
+                  <div className={`npc-avatar ${isRaghuSpeaking ? "talking-avatar" : ""}`}>
+                    <img src={isRaghuSpeaking ? raghuTalking : raghuIdle} alt="Raghu" />
                   </div>
                 )}
                 <div className="message-content">

@@ -1344,6 +1344,48 @@
   color: #fca5a5;
 }
 
+/* 2D Character Talking Animations */
+.speaking-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(16, 185, 129, 0.92);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+  animation: pulse 1s infinite alternate ease-in-out;
+  z-index: 5;
+}
+
+.speaking-icon {
+  animation: soundBounce 0.4s infinite alternate;
+}
+
+@keyframes soundBounce {
+  from { transform: scale(0.9); }
+  to { transform: scale(1.15); }
+}
+
+.talking-anim {
+  animation: talkingBob 0.3s infinite alternate ease-in-out;
+}
+
+@keyframes talkingBob {
+  0% { transform: scale(1.02) translateY(0); }
+  100% { transform: scale(1.03) translateY(-2px); }
+}
+
+.talking-avatar img {
+  animation: talkingBob 0.25s infinite alternate ease-in-out;
+  border-color: #10b981 !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .main-grid {
