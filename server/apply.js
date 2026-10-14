@@ -67,41 +67,57 @@ export function applyReply(state, r) {
 
   // 5. Quest unlock validation (Code decides, not LLM)
   if (r.action === "unlock_quest") {
-    if (quest && state.quests[id] === "locked" && state.trust >= quest.minTrust) {
+    if (!quest) {
+      actionRejected = true;
+      rejectionReason = "Unknown quest";
+    } else if (state.quests[id] !== "locked") {
+      actionRejected = true;
+      rejectionReason = `Quest is already ${state.quests[id]}`;
+    } else if (state.trust < quest.minTrust) {
+      actionRejected = true;
+      rejectionReason = `Trust (${state.trust}) is lower than required (${quest.minTrust})`;
+    } else {
       state.quests[id] = "active";
       events.push(`📜 New quest unlocked: "${quest.title}"`);
-    } else {
-      actionRejected = true;
-      rejectionReason = quest
-        ? `Trust (${state.trust}) is lower than required (${quest.minTrust})`
-        : "Unknown quest";
     }
   }
 
   // 6. Quest completion validation (World flag verification prevents lying)
   if (r.action === "complete_quest") {
-    if (quest && state.quests[id] === "active" && state.flags[quest.flag]) {
+    if (!quest) {
+      actionRejected = true;
+      rejectionReason = "Unknown quest";
+    } else if (state.quests[id] === "done") {
+      actionRejected = true;
+      rejectionReason = "Quest is already completed";
+    } else if (state.quests[id] !== "active") {
+      actionRejected = true;
+      rejectionReason = `Quest has not been unlocked yet (current status: ${state.quests[id]})`;
+    } else if (!state.flags[quest.flag]) {
+      actionRejected = true;
+      rejectionReason = "Player has not actually performed the world action!";
+      events.push(`⚠️ Raghu verified the fields: the task was NOT actually done!`);
+    } else {
       state.quests[id] = "done";
       state.farmHealth = clamp(state.farmHealth + 30, 0, 100);
       events.push(`✅ Quest complete: "${quest.title}" (+30 Farm Health)`);
-    } else {
-      actionRejected = true;
-      rejectionReason = "Player has not actually performed the world action!";
-      // Hardening: Server detects the attempted unverified completion
-      if (quest && !state.flags[quest.flag]) {
-        events.push(`⚠️ Raghu verified the fields: the task was NOT actually done!`);
-      }
     }
   }
 
   // 7. Item reward validation (Trust must be >= 5)
   if (r.action === "give_item") {
-    if (ITEMS.includes(id) && !state.inventory.includes(id) && state.trust >= 5) {
+    if (!ITEMS.includes(id)) {
+      actionRejected = true;
+      rejectionReason = "Unknown item";
+    } else if (state.inventory.includes(id)) {
+      actionRejected = true;
+      rejectionReason = "Item already in inventory";
+    } else if (state.trust < 5) {
+      actionRejected = true;
+      rejectionReason = `Trust (${state.trust}) must be >= 5 to receive items`;
+    } else {
       state.inventory.push(id);
       events.push(`🎁 Raghu gave you an item: [${id}]`);
-    } else {
-      actionRejected = true;
-      rejectionReason = state.trust < 5 ? "Trust must be >= 5 to receive items" : "Already in inventory";
     }
   }
 

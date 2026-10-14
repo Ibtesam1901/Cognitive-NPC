@@ -26,7 +26,11 @@ app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
     uptime: process.uptime(),
-    hasApiKey: Boolean(process.env.LLM_API_KEY && process.env.LLM_API_KEY !== "your_key_here"),
+    hasApiKey: Boolean(
+      process.env.LLM_API_KEY &&
+      process.env.LLM_API_KEY.trim() &&
+      process.env.LLM_API_KEY !== "your_key_here"
+    ),
     model: process.env.LLM_MODEL || "gemini-flash-latest",
   });
 });
@@ -37,8 +41,8 @@ app.get("/api/state", (req, res) => {
 });
 
 app.post("/api/chat", async (req, res) => {
-  const { sessionId, message, config, language = "English", imageContext } = req.body;
-  if (!sessionId || !message?.trim()) {
+  const { sessionId, message, config, language = "English", imageContext } = req.body || {};
+  if (!sessionId || typeof message !== "string" || !message.trim()) {
     return res.status(400).json({ error: "sessionId and message required" });
   }
 
@@ -66,6 +70,8 @@ app.post("/api/chat", async (req, res) => {
       parsed = {
         reply: language === "Hindi"
           ? "हूँ... हवा तुम्हारे शब्द उड़ा ले गई, ज़रा फिर से कहो।"
+          : language === "Hinglish"
+          ? "Hmph... hawa tumhare shabd uda le gayi, zara firse kaho."
           : "Hmph... say that again? The wind carried your words away.",
         mood: state.mood || "wary",
         trust_change: 0,
@@ -103,7 +109,7 @@ app.post("/api/chat", async (req, res) => {
 
 // Interactive in-game puzzle solver endpoint
 app.post("/api/solve-puzzle", (req, res) => {
-  const { sessionId, puzzleId, solution } = req.body;
+  const { sessionId, puzzleId, solution } = req.body || {};
   const state = getState(sessionId);
   const puzzle = PUZZLES[puzzleId];
 
@@ -119,31 +125,26 @@ app.post("/api/solve-puzzle", (req, res) => {
   let isCorrect = false;
 
   if (puzzleId === "pump_valves") {
-    // solution: { valveA: 30, valveB: 'bypass', valveC: 'open' }
+    const sObj = solution && typeof solution === "object" ? solution : {};
     if (
-      Number(solution.valveA) === 30 &&
-      String(solution.valveB).toLowerCase() === "bypass" &&
-      String(solution.valveC).toLowerCase() === "open"
+      Number(sObj.valveA) === puzzle.solution.valveA &&
+      String(sObj.valveB || "").toLowerCase() === puzzle.solution.valveB &&
+      String(sObj.valveC || "").toLowerCase() === puzzle.solution.valveC
     ) {
       isCorrect = true;
-      state.flags.pump_repaired = true;
+      state.flags[puzzle.solvedFlag] = true;
       state.farmHealth = Math.min(100, state.farmHealth + 30);
       state.trust = Math.min(10, state.trust + 2);
     }
-  } else if (puzzleId === "map_trail") {
-    // solution: string
-    const s = String(solution).toLowerCase().trim();
-    if (puzzle.acceptedAnswers.some((ans) => s.includes(ans))) {
+  } else if (puzzle.acceptedAnswers) {
+    const s = String(solution || "").toLowerCase().trim();
+    if (s && puzzle.acceptedAnswers.some((ans) => s.includes(ans))) {
       isCorrect = true;
-      state.flags.found_cow = true;
-      state.trust = Math.min(10, state.trust + 2);
-    }
-  } else if (puzzleId === "seed_riddle") {
-    const s = String(solution).toLowerCase().trim();
-    if (puzzle.acceptedAnswers.some((ans) => s.includes(ans))) {
-      isCorrect = true;
-      if (!state.inventory.includes("seeds")) {
-        state.inventory.push("seeds");
+      if (puzzle.solvedFlag) {
+        state.flags[puzzle.solvedFlag] = true;
+      }
+      if (puzzle.rewardItem && !state.inventory.includes(puzzle.rewardItem)) {
+        state.inventory.push(puzzle.rewardItem);
       }
       state.trust = Math.min(10, state.trust + 2);
     }
@@ -166,12 +167,19 @@ app.post("/api/solve-puzzle", (req, res) => {
 });
 
 app.post("/api/world-action", (req, res) => {
-  const { sessionId, action } = req.body;
+  const { sessionId, action } = req.body || {};
   const state = getState(sessionId);
   const a = WORLD_ACTIONS[action];
 
   if (!a) {
     return res.status(400).json({ error: "Unknown world action" });
+  }
+
+  if (state.quests[a.requiresQuest] === "done") {
+    return res.json({
+      text: "You have already completed this task! Raghu is grateful.",
+      state: publicState(state),
+    });
   }
 
   if (state.quests[a.requiresQuest] !== "active") {
@@ -186,7 +194,7 @@ app.post("/api/world-action", (req, res) => {
 });
 
 app.post("/api/config", (req, res) => {
-  const { sessionId, apiKey, baseURL, model } = req.body;
+  const { sessionId, apiKey, baseURL, model } = req.body || {};
   if (!sessionId) return res.status(400).json({ error: "sessionId required" });
 
   sessionConfigs.set(sessionId, { apiKey, baseURL, model });
@@ -194,7 +202,7 @@ app.post("/api/config", (req, res) => {
 });
 
 app.post("/api/reset", (req, res) => {
-  const sessionId = req.body.sessionId || "default";
+  const sessionId = req.body?.sessionId || "default";
   sessions.set(sessionId, newState());
   res.json({
     text: "A new dawn breaks over Bhima's Hollow. Raghu looks at you with fresh eyes.",

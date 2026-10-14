@@ -16,20 +16,13 @@ import {
   Package,
   Brain,
   Handshake,
-  AlertTriangle,
-  PlayCircle,
-  ExternalLink,
-  ChevronDown,
   Info,
   Languages,
   Eye,
   Sliders,
   MapPin,
   HelpCircle as RiddleIcon,
-  Maximize2,
-  X,
   Wrench,
-  Search,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { sound } from "./utils/sound.js";
@@ -129,16 +122,14 @@ export default function App() {
 
   // Synchronized lip flap effect when Raghu is speaking words
   useEffect(() => {
-    if (!isRaghuSpeaking) {
-      setMouthOpen(false);
-      setCurrentSpokenWord("");
-      return;
-    }
-    // High-tempo natural syllabic mouth movement
+    if (!isRaghuSpeaking) return;
     const interval = setInterval(() => {
       setMouthOpen((prev) => !prev);
     }, 145);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      setMouthOpen(false);
+    };
   }, [isRaghuSpeaking]);
 
   // Interactive Visual Clue Inspection
@@ -161,6 +152,34 @@ export default function App() {
   const endRef = useRef(null);
   const recognitionRef = useRef(null);
 
+  // Listen for voices loading in browsers
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      const onVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.onvoiceschanged = onVoicesChanged;
+      return () => {
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    }
+  }, []);
+
+  // Keyboard accessibility: ESC key closes modals
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setShowSettings(false);
+        setShowGuide(false);
+        setInspectedImage(null);
+        setActivePuzzle(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // Initialize Speech Recognition if supported
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -171,25 +190,23 @@ export default function App() {
       recognition.lang = language === "Hindi" ? "hi-IN" : "en-IN";
 
       recognition.onresult = (e) => {
-        const transcript = e.results[0][0].transcript;
+        const transcript = e.results?.[0]?.[0]?.transcript || "";
         setInput(transcript);
         setIsListening(false);
       };
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
       recognitionRef.current = recognition;
+
+      return () => {
+        try {
+          recognition.abort();
+        } catch {
+          // Cleanup recognition
+        }
+      };
     }
   }, [language]);
-
-  // Fetch initial game state and check server health
-  useEffect(() => {
-    fetchState();
-    checkHealth();
-  }, []);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
 
   const checkHealth = async () => {
     try {
@@ -203,15 +220,46 @@ export default function App() {
     }
   };
 
-  const fetchState = async () => {
-    try {
-      const res = await fetch(`${API}/api/state?sessionId=${sessionId}`);
-      const data = await res.json();
-      setGame(data.state);
-    } catch (e) {
-      console.error("Failed to fetch state:", e);
-    }
-  };
+  // Fetch initial game state and check server health in parallel on mount
+  useEffect(() => {
+    let isMounted = true;
+    const initGame = async () => {
+      try {
+        const [stateRes, healthRes] = await Promise.all([
+          fetch(`${API}/api/state?sessionId=${sessionId}`),
+          fetch(`${API}/api/health`),
+        ]);
+        if (!isMounted) return;
+
+        if (stateRes.ok) {
+          const data = await stateRes.json();
+          if (isMounted && data?.state) {
+            setGame(data.state);
+          }
+        }
+
+        if (healthRes.ok) {
+          const data = await healthRes.json();
+          if (isMounted) {
+            setServerHealth({ online: true, hasApiKey: data.hasApiKey, model: data.model });
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setServerHealth({ online: false, hasApiKey: false, model: "offline" });
+        }
+      }
+    };
+
+    initGame();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
   const addMessage = (who, text, icon = null, meta = null) => {
     setMessages((prev) => [
@@ -364,7 +412,9 @@ export default function App() {
         });
       }
 
-      setGame(data.state);
+      if (data?.state) {
+        setGame(data.state);
+      }
     } catch (e) {
       sound.playBuzzer();
       addMessage("system", e.message || "Raghu seemed distracted. Try speaking again.", "⚠️");
@@ -379,7 +429,9 @@ export default function App() {
     try {
       const res = await post("/api/solve-puzzle", { puzzleId, solution });
       setPuzzleFeedback({ success: res.success, message: res.message });
-      setGame(res.state);
+      if (res?.state) {
+        setGame(res.state);
+      }
 
       if (res.success) {
         sound.playChime();
@@ -392,7 +444,8 @@ export default function App() {
       } else {
         sound.playBuzzer();
       }
-    } catch (e) {
+    } catch {
+      sound.playBuzzer();
       setPuzzleFeedback({ success: false, message: "Error communicating with game engine." });
     }
   }
@@ -402,9 +455,12 @@ export default function App() {
     try {
       const data = await post("/api/world-action", { action });
       addMessage("system", data.text, "📍");
-      setGame(data.state);
+      if (data?.state) {
+        setGame(data.state);
+      }
       sound.playChime();
-    } catch (e) {
+    } catch {
+      sound.playBuzzer();
       addMessage("system", "Action could not be completed.", "⚠️");
     }
   }
@@ -414,7 +470,9 @@ export default function App() {
     sound.playClick();
     try {
       const data = await post("/api/reset", {});
-      setGame(data.state);
+      if (data?.state) {
+        setGame(data.state);
+      }
       setMessages([
         {
           who: "system",
@@ -424,7 +482,7 @@ export default function App() {
       ]);
       sound.playChime();
     } catch (e) {
-      console.error(e);
+      console.error("Reset error:", e);
     }
   }
 
@@ -502,7 +560,6 @@ export default function App() {
   };
 
   const raghuChar = getRaghuCharacter();
-  const activeQuests = game.quests.filter((q) => q.status === "active");
 
   const trustColor =
     game.trust < 0 ? "var(--accent-red)" : game.trust > 3 ? "var(--accent-green)" : "var(--accent-amber)";
