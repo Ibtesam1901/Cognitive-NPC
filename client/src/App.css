@@ -1113,6 +1113,237 @@
   to { transform: rotate(360deg); }
 }
 
+/* Multi-Language Selector */
+.language-selector {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 2px 4px;
+  gap: 2px;
+}
+
+.lang-icon {
+  color: var(--accent-amber);
+  margin: 0 4px;
+}
+
+.lang-btn {
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lang-btn:hover {
+  color: #fff;
+}
+
+.lang-btn.active {
+  background: rgba(217, 119, 6, 0.25);
+  color: #fef3c7;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+}
+
+/* Visual Clues / Image Investigation */
+.clues-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.clue-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.clue-card:hover {
+  border-color: var(--accent-amber);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);
+}
+
+.clue-thumb {
+  width: 100%;
+  height: 75px;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.clue-card:hover .clue-thumb {
+  transform: scale(1.05);
+}
+
+.clue-info {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.clue-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fef3c7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clue-action {
+  font-size: 0.65rem;
+  color: var(--accent-amber);
+  margin-top: 2px;
+}
+
+/* Cognitive Puzzle Launch Grid */
+.puzzle-launch-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.puzzle-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #f3f4f6;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.puzzle-btn:hover {
+  background: rgba(217, 119, 6, 0.12);
+  border-color: rgba(217, 119, 6, 0.35);
+  transform: translateX(2px);
+}
+
+.puzzle-btn.completed {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.puzzle-btn-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.puzzle-btn-text span {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.puzzle-btn-text small {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Image Inspection Lightbox */
+.image-inspect-card {
+  max-width: 680px;
+}
+
+.lightbox-img-wrapper {
+  width: 100%;
+  max-height: 55vh;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+  background: #000;
+}
+
+.lightbox-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.image-desc-text {
+  font-size: 0.85rem;
+  color: #d1d5db;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
+/* Cognitive Puzzle Modals */
+.puzzle-modal-card {
+  max-width: 520px;
+}
+
+.puzzle-hint-text {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-amber);
+}
+
+.puzzle-dial-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.puzzle-slider {
+  width: 100%;
+  accent-color: var(--accent-amber);
+  cursor: pointer;
+}
+
+.puzzle-toggle-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.quick-answer-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.puzzle-feedback {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.puzzle-feedback.success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #34d399;
+}
+
+.puzzle-feedback.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .main-grid {
@@ -1136,3 +1367,4 @@
     max-height: 400px;
   }
 }
+
