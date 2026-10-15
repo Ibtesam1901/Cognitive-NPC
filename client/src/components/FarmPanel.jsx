@@ -199,6 +199,10 @@ export function FarmPanel({ farmState, onFarmAction, isActing }) {
               { icon: "🎋", key: "sugarcane",     label: "Sugarcane"     },
               { icon: "🌼", key: "marigold_seeds",label: "Marigold Seeds"},
               { icon: "🏵️", key: "marigold",      label: "Marigolds"     },
+              { icon: "🥛", key: "milk",          label: "Cow Milk"      },
+              { icon: "🫓", key: "roti",          label: "Warm Roti"     },
+              { icon: "🍯", key: "gur",           label: "Golden Gur"    },
+              { icon: "🥣", key: "kheer",         label: "Sweet Kheer"   },
               { icon: "💧", key: "water_can",     label: "Water Cans"    },
               { icon: "🌿", key: "fertilizer",    label: "Fertilizer"    },
               { icon: "🌸", key: "flowers",       label: "Wildflowers"   },
@@ -215,8 +219,8 @@ export function FarmPanel({ farmState, onFarmAction, isActing }) {
         </div>
 
         <div className="market-block">
-          <h5><ShoppingBag size={14} /> Village Actions &amp; Sluice</h5>
-          <div className="market-trade-row">
+          <h5><ShoppingBag size={14} /> Village Actions, Animals &amp; Sluice</h5>
+          <div className="market-trade-row" style={{ flexWrap: "wrap", gap: "8px" }}>
             <button
               className="market-btn sluice-btn"
               onClick={() => send("TOGGLE_SLUICE")}
@@ -225,6 +229,33 @@ export function FarmPanel({ farmState, onFarmAction, isActing }) {
               title="Open/close canal sluice gate to flood furrows"
             >
               🌊 {farmState?.flags?.sluiceOpen ? "Sluice Open ✓" : "Open Sluice Gate"}
+            </button>
+            <button
+              className="market-btn feed-cow-btn"
+              onClick={() => send("FEED_COW")}
+              disabled={isActing || farmState?.flags?.cowFedToday || ((inventory.wheat || 0) < 1 && (inventory.sugarcane || 0) < 1)}
+              title="Feed sweet wheat or cane to Lakshmi the cow"
+              style={{ background: farmState?.flags?.cowFedToday ? "#059669" : "#d97706", color: "#fff" }}
+            >
+              🐄 {farmState?.flags?.cowFedToday ? "Lakshmi Fed ✓" : "Feed Lakshmi"}
+            </button>
+            <button
+              className="market-btn milk-cow-btn"
+              onClick={() => send("MILK_COW")}
+              disabled={isActing || !farmState?.flags?.cowFedToday || farmState?.flags?.milkCollectedToday}
+              title="Collect fresh frothy milk from Lakshmi"
+              style={{ background: farmState?.flags?.milkCollectedToday ? "#0284c7" : "#0284c7", color: "#fff" }}
+            >
+              🥛 {farmState?.flags?.milkCollectedToday ? "Milk Collected ✓" : "Milk Lakshmi"}
+            </button>
+            <button
+              className="market-btn pet-dog-btn"
+              onClick={() => send("PET_DOG")}
+              disabled={isActing}
+              title="Pet Sheru the village dog"
+              style={{ background: "#78350f", color: "#fff" }}
+            >
+              🐕 {farmState?.flags?.dogPetToday ? "Pet Sheru ✓" : "Pet Sheru"}
             </button>
             <button
               className="market-btn pick-flowers-btn"

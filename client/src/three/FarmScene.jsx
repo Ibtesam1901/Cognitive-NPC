@@ -238,8 +238,8 @@ export default function FarmScene({
             <VoxelTree position={[-3.5, 0, -8.2]} scale={1.0} type="birch" />
             <VoxelTree position={[0.5, 0, -8.5]} scale={1.15} type="oak" />
             <VoxelTree position={[3.5, 0, -8.0]} scale={1.25} type="spruce" />
-            <VoxelTree position={[6.0, 0.35, -8.5]} scale={1.2} type="oak" />
-            <VoxelTree position={[8.5, 0.35, -9.0]} scale={1.3} type="spruce" />
+            <VoxelTree position={[4.8, 0.35, -10.2]} scale={1.1} type="oak" />
+            <VoxelTree position={[9.2, 0.35, -8.8]} scale={1.25} type="spruce" />
 
             {/* East Border Orchard (Fruit / Apple Trees shifted around Market) */}
             <VoxelTree position={[6.8, 0, -4.5]} scale={1.05} type="fruit" />
@@ -274,9 +274,9 @@ export default function FarmScene({
               onPet={onPetDog}
             />
 
-            {/* Outdoor Cooking Chulha Hearth */}
+            {/* Outdoor Cooking Chulha Hearth (Dedicated outdoor cooking pavilion) */}
             <VillageChulha
-              position={[-1.8, 0, 0.5]}
+              position={[-2.8, 0, 1.4]}
               onOpenKitchen={onOpenKitchen}
             />
 

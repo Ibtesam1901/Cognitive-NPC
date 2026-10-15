@@ -111,7 +111,7 @@ export function Hotspots({
       </group>
 
       {/* Hotspot 6: Village Kitchen Chulha */}
-      <group position={[-1.8, 1.2, 0.5]}>
+      <group position={[-2.8, 1.2, 1.4]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
             className="three-hotspot-btn"

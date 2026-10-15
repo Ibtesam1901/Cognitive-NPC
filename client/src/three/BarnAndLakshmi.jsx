@@ -96,18 +96,17 @@ export function BarnAndLakshmi({
         </mesh>
       </group>
 
-      {/* Lakshmi the Cow (Shown only when found!) */}
-      {isCowFound ? (
-        <group position={[0, 0.55, 0]} rotation={[0, Math.PI / 2, 0]}>
-          {/* Main Cow Body (Barrel) */}
-          <mesh position={[0, 0.45, 0]} castShadow material={materials.cowWhite}>
-            <boxGeometry args={[1.3, 0.75, 0.65]} />
-          </mesh>
+      {/* Lakshmi the Cow (Indian Zebu sacred farm cow) */}
+      <group position={[0, 0.55, 0]} rotation={[0, Math.PI / 2, 0]}>
+        {/* Main Cow Body (Barrel) */}
+        <mesh position={[0, 0.45, 0]} castShadow material={materials.cowWhite}>
+          <boxGeometry args={[1.3, 0.75, 0.65]} />
+        </mesh>
 
-          {/* Brown spot on flank */}
-          <mesh position={[0.15, 0.55, 0.33]} material={materials.cowBrown}>
-            <boxGeometry args={[0.5, 0.4, 0.02]} />
-          </mesh>
+        {/* Brown spot on flank */}
+        <mesh position={[0.15, 0.55, 0.33]} material={materials.cowBrown}>
+          <boxGeometry args={[0.5, 0.4, 0.02]} />
+        </mesh>
           <mesh position={[-0.2, 0.4, -0.33]} material={materials.cowBrown}>
             <boxGeometry args={[0.45, 0.35, 0.02]} />
           </mesh>
@@ -175,14 +174,6 @@ export function BarnAndLakshmi({
             </mesh>
           </group>
         </group>
-      ) : (
-        /* Empty tether rope hanging on post when cow is lost */
-        <group position={[0.6, 0.35, 0.5]}>
-          <mesh rotation={[0, 0, 0.2]} material={materials.rope}>
-            <torusGeometry args={[0.12, 0.02, 4, 8]} />
-          </mesh>
-        </group>
-      )}
     </group>
   );
 }

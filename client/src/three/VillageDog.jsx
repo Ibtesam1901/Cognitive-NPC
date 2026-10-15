@@ -9,22 +9,52 @@ import { useFrame } from "@react-three/fiber";
  * - Can be petted by clicking on him
  */
 export function VillageDog({
-  position = [-1.0, 0, 2.2],
+  position = [-0.8, 0, 2.4],
   playerPos = { x: 0, z: 0 },
   onPet,
 }) {
+  const dogGroupRef = useRef();
   const tailRef = useRef();
   const headRef = useRef();
+  const legsRef = useRef([]);
 
-  const isNear =
-    Math.hypot((playerPos?.x || 0) - position[0], (playerPos?.z || 0) - position[2]) < 2.5;
+  // Internal dog coordinates for smooth walking AI
+  const dogPos = useRef({ x: position[0], z: position[2], rotY: Math.PI / 3 });
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const time = state.clock.elapsedTime;
-    // Tail wagging increases when player is near
+    const targetX = playerPos?.x ?? 0;
+    const targetZ = playerPos?.z ?? 0;
+
+    const dx = targetX - dogPos.current.x;
+    const dz = targetZ - dogPos.current.z;
+    const dist = Math.hypot(dx, dz);
+    const isNear = dist < 2.0;
+
+    // Follow player if further than 2.0m, stop if closer than 1.8m
+    let isMoving = false;
+    if (dist > 2.0 && dist < 14) {
+      isMoving = true;
+      const angle = Math.atan2(dx, dz);
+      dogPos.current.rotY = angle;
+
+      // Move toward player at 2.4 m/s
+      const moveDist = Math.min(dist - 1.8, delta * 2.4);
+      dogPos.current.x += Math.sin(angle) * moveDist;
+      dogPos.current.z += Math.cos(angle) * moveDist;
+    }
+
+    // Apply position & rotation to 3D group
+    if (dogGroupRef.current) {
+      dogGroupRef.current.position.x = dogPos.current.x;
+      dogGroupRef.current.position.z = dogPos.current.z;
+      dogGroupRef.current.rotation.y = dogPos.current.rotY;
+    }
+
+    // Tail wagging increases when near or moving
     if (tailRef.current) {
-      const wagSpeed = isNear ? 12 : 3;
-      const wagAmp = isNear ? 0.4 : 0.15;
+      const wagSpeed = isMoving ? 14 : isNear ? 10 : 3;
+      const wagAmp = isMoving || isNear ? 0.35 : 0.12;
       tailRef.current.rotation.y = Math.sin(time * wagSpeed) * wagAmp;
     }
 
@@ -33,11 +63,25 @@ export function VillageDog({
       headRef.current.rotation.z = Math.sin(time * 1.5) * 0.08;
       headRef.current.rotation.y = isNear ? Math.sin(time * 2) * 0.15 : 0;
     }
+
+    // Leg trotting animation when walking
+    if (legsRef.current.length === 4) {
+      legsRef.current.forEach((leg, idx) => {
+        if (!leg) return;
+        if (isMoving) {
+          const phase = idx % 2 === 0 ? 1 : -1;
+          leg.rotation.x = Math.sin(time * 10) * 0.4 * phase;
+        } else {
+          leg.rotation.x = 0;
+        }
+      });
+    }
   });
 
   return (
     <group
-      position={position}
+      ref={dogGroupRef}
+      position={[position[0], 0, position[2]]}
       rotation={[0, Math.PI / 3, 0]}
       onClick={(e) => {
         e.stopPropagation();
@@ -86,14 +130,25 @@ export function VillageDog({
       </group>
 
       {/* 4 Sturdy Paws / Legs */}
-      {[-0.12, 0.12].map((x, xi) =>
-        [-0.22, 0.22].map((z, zi) => (
-          <mesh key={`dogleg-${xi}-${zi}`} position={[x, 0.12, z]} castShadow>
-            <boxGeometry args={[0.08, 0.24, 0.08]} />
+      {[
+        [-0.12, 0.18, 0],
+        [0.12, 0.18, 1],
+        [-0.12, -0.18, 2],
+        [0.12, -0.18, 3],
+      ].map(([x, z, idx]) => (
+        <group
+          key={`dogleg-${idx}`}
+          position={[x, 0.22, z]}
+          ref={(el) => {
+            if (el) legsRef.current[idx] = el;
+          }}
+        >
+          <mesh position={[0, -0.11, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.22, 0.08]} />
             <meshStandardMaterial color="#f8fafc" roughness={0.9} flatShading />
           </mesh>
-        ))
-      )}
+        </group>
+      ))}
 
       {/* Wagging Tail */}
       <group ref={tailRef} position={[0, 0.45, -0.32]}>

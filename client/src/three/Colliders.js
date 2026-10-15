@@ -34,8 +34,8 @@ export const VILLAGE_OBSTACLES = [
   // Village Windmill (centered at [6.5, 0, -8.5])
   { id: "windmill_tower", type: "cylinder", x: 6.5, z: -8.5, radius: 1.6 },
 
-  // Cooking Chulha (at [-1.8, 0, 0.5])
-  { id: "chulha_hearth", type: "box", minX: -2.3, maxX: -1.3, minZ: 0.0, maxZ: 1.0 },
+  // Cooking Chulha (at [-2.8, 0, 1.4])
+  { id: "chulha_hearth", type: "box", minX: -3.4, maxX: -2.2, minZ: 0.9, maxZ: 1.9 },
 
   // Village Campfire & Rest Bench (at [1.6, 0, 3.6])
   { id: "campfire_bench", type: "box", minX: 1.0, maxX: 2.2, minZ: 3.2, maxZ: 4.6 },
