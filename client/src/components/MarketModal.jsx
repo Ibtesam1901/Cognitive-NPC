@@ -14,6 +14,10 @@ const CROPS_LIST = [
   { id: "rice", name: "Polished Rice", basePrice: 16 },
   { id: "marigold", name: "Marigold Blossoms", basePrice: 12 },
   { id: "sugarcane", name: "Sugarcane Stalks", basePrice: 24 },
+  { id: "milk", name: "Fresh Cow Milk Pot", basePrice: 18 },
+  { id: "roti", name: "Hearth-Baked Warm Roti", basePrice: 22 },
+  { id: "gur", name: "Raw Golden Jaggery (Gur)", basePrice: 45 },
+  { id: "kheer", name: "Festive Sweet Rice Kheer", basePrice: 75 },
 ];
 
 export function MarketModal({

@@ -16,6 +16,8 @@ import { ThreeLoadingScreen } from "./ThreeLoadingScreen.jsx";
 import { PlayerController } from "./PlayerController.jsx";
 import { Collectibles } from "./Collectibles.jsx";
 import { VillageMarketStall } from "./VillageMarketStall.jsx";
+import { VillageDog } from "./VillageDog.jsx";
+import { VillageChulha, VillageWindmill, VillageCampfire } from "./VillageDecorations.jsx";
 import { usePrefersReducedMotion } from "../utils/motion.js";
 
 /**
@@ -59,6 +61,11 @@ export default function FarmScene({
   onPlotClick,
   onCollectItem,
   onOpenMarket,
+  onOpenKitchen,
+  onOpenSalimChat,
+  onPetDog,
+  onFeedCow,
+  onMilkCow,
   onSluiceClick,
   isSluiceOpen = false,
   joystickInput = null,
@@ -258,6 +265,28 @@ export default function FarmScene({
               position={[5.2, 0, 0.2]}
               isCowFound={isCowFound}
               reducedMotion={reducedMotion}
+            />
+
+            {/* Sheru the Courtyard Village Dog */}
+            <VillageDog
+              position={[-0.8, 0, 2.4]}
+              playerPos={playerCoords}
+              onPet={onPetDog}
+            />
+
+            {/* Outdoor Cooking Chulha Hearth */}
+            <VillageChulha
+              position={[-1.8, 0, 0.5]}
+              onOpenKitchen={onOpenKitchen}
+            />
+
+            {/* Village Windmill atop the northern ridge */}
+            <VillageWindmill position={[6.5, 0.35, -8.5]} />
+
+            {/* Courtyard Campfire & Rest Bench */}
+            <VillageCampfire
+              position={[1.6, 0, 3.6]}
+              isNight={time < 5 || time >= 20}
             />
 
             {/* Low-Poly Animated Raghu Character - stood warmly at front of house steps */}

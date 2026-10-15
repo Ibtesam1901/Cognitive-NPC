@@ -31,6 +31,15 @@ export const VILLAGE_OBSTACLES = [
   { id: "market_stall_main", type: "box", minX: 8.0, maxX: 11.2, minZ: -1.2, maxZ: 2.2 },
   { id: "market_stall_grain", type: "box", minX: 8.5, maxX: 10.8, minZ: 2.8, maxZ: 5.2 },
 
+  // Village Windmill (centered at [6.5, 0, -8.5])
+  { id: "windmill_tower", type: "cylinder", x: 6.5, z: -8.5, radius: 1.6 },
+
+  // Cooking Chulha (at [-1.8, 0, 0.5])
+  { id: "chulha_hearth", type: "box", minX: -2.3, maxX: -1.3, minZ: 0.0, maxZ: 1.0 },
+
+  // Village Campfire & Rest Bench (at [1.6, 0, 3.6])
+  { id: "campfire_bench", type: "box", minX: 1.0, maxX: 2.2, minZ: 3.2, maxZ: 4.6 },
+
   // Expanded North Border Wall & Dense Forest Trees
   { id: "north_boundary", type: "box", minX: -18, maxX: 18, minZ: -16.5, maxZ: -14.8 },
   // Expanded South Boundary

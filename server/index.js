@@ -19,6 +19,7 @@ import { generateSuggestions, getFallbackSuggestions } from "./suggest.js";
 
 // [NPC SHAPES FARM START]
 import { handleTurn } from "./npcHandler.js";
+import { handleSalimChat } from "./salimHandler.js";
 import { load as loadNpcState, save as saveNpcState, reset as resetNpcState } from "./memoryStore.js";
 import { applyPlayerEvent } from "./gameEngine.js";
 // [NPC SHAPES FARM END]
@@ -43,6 +44,17 @@ app.post("/api/npc/chat", async (req, res) => {
   }
 
   const result = await handleTurn(sessionId, message.trim().slice(0, 500), config);
+  res.json(result);
+});
+
+// Salim the Merchant Chat Endpoint
+app.post("/api/merchant/chat", async (req, res) => {
+  const { message, config } = req.body || {};
+  if (typeof message !== "string" || !message.trim()) {
+    return res.status(400).json({ error: "message required" });
+  }
+
+  const result = await handleSalimChat(message.trim(), config);
   res.json(result);
 });
 

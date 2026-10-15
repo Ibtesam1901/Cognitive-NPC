@@ -13,12 +13,41 @@ export const EMOTIONS = ["happy", "neutral", "annoyed", "worried", "proud"];
 export const GROWTH_DAYS = 2; // watered days needed before a crop is ready
 export const BASE_PRICE = 10; // gold per wheat before the price multiplier
 
-// Base sell values per crop unit
+// Base sell values per crop & farm goods unit
 export const CROP_BASE_PRICES = {
   wheat: 10,
   rice: 16,
   sugarcane: 24,
   marigold: 12,
+  milk: 18,
+  roti: 22,
+  gur: 45,
+  kheer: 75,
+};
+
+// Cooking / Crafting Recipes using farm harvests
+export const CRAFT_RECIPES = {
+  roti: {
+    name: "Warm Roti",
+    desc: "Crispy hearth-baked flatbread from freshly ground wheat.",
+    ingredients: { wheat: 1 },
+    yield: 2,
+    goldValue: 22,
+  },
+  gur: {
+    name: "Raw Gur (Jaggery)",
+    desc: "Golden caramel jaggery boiled from crushed sugarcane stalk.",
+    ingredients: { sugarcane: 2 },
+    yield: 1,
+    goldValue: 45,
+  },
+  kheer: {
+    name: "Festive Rice Kheer",
+    desc: "Rich slow-cooked sweet pudding of rice, whole cow milk, and pure jaggery.",
+    ingredients: { rice: 1, milk: 1, gur: 1 },
+    yield: 1,
+    goldValue: 75,
+  },
 };
 
 // Market caravan seed / supply purchase prices
@@ -103,12 +132,20 @@ export function createInitialState() {
       rice: 0,
       sugarcane: 0,
       marigold: 0,
+      milk: 0,
+      roti: 0,
+      gur: 0,
+      kheer: 0,
     },
     prices: {
       wheat: 1.0,
       rice: 1.0,
       sugarcane: 1.0,
       marigold: 1.0,
+      milk: 1.0,
+      roti: 1.0,
+      gur: 1.0,
+      kheer: 1.0,
     },
     flags: {
       harvestedWheat: false,
@@ -118,6 +155,9 @@ export function createInitialState() {
       shrineOffered: false,
       canChangeWeather: false,
       sluiceOpen: false,
+      cowFedToday: false,
+      milkCollectedToday: false,
+      dogPetToday: false,
       giftsToday: 0,
       trustGainedToday: 0,
       weatherChangesToday: 0,
@@ -400,7 +440,8 @@ const playerEvents = {
   SELL(state, e) {
     const item = e.item ?? "wheat";
     const qty = clamp(toInt(e.qty, 1), 1, LIMITS.itemCap);
-    if (!CROPS.includes(item)) fail(`Raghu and merchant only buy farm crops (${CROPS.join(", ")})`);
+    const validTradeItems = [...CROPS, "milk", "roti", "gur", "kheer"];
+    if (!validTradeItems.includes(item)) fail(`merchant only trades farm crops and cooked goods (${validTradeItems.join(", ")})`);
     if ((state.inventory[item] ?? 0) < qty) fail(`not enough ${item}`);
     
     const baseVal = CROP_BASE_PRICES[item] ?? BASE_PRICE;
@@ -408,7 +449,61 @@ const playerEvents = {
     const gold = Math.round(qty * baseVal * mult);
     state.inventory[item] -= qty;
     state.gold += gold;
-    return `Sold ${qty} ${item} for ${gold} gold`;
+    return `Sold ${qty} ${item.replace("_", " ")} for ${gold} gold`;
+  },
+
+  COOK(state, e) {
+    const recipeId = e.recipe;
+    const recipe = CRAFT_RECIPES[recipeId];
+    if (!recipe) fail("unknown cooking recipe");
+
+    // Check ingredients
+    for (const [ing, count] of Object.entries(recipe.ingredients)) {
+      if ((state.inventory[ing] ?? 0) < count) {
+        fail(`missing ingredients: need ${count} ${ing.replace("_", " ")}, have ${state.inventory[ing] ?? 0}`);
+      }
+    }
+
+    // Deduct ingredients
+    for (const [ing, count] of Object.entries(recipe.ingredients)) {
+      state.inventory[ing] -= count;
+    }
+
+    // Grant cooked yield
+    addItem(state, recipeId, recipe.yield);
+    return `Cooked ${recipe.yield} ${recipe.name}! Fresh warmth fills the hearth.`;
+  },
+
+  FEED_COW(state) {
+    if (state.flags.cowFedToday) fail("Lakshmi is already full and peacefully chewing cud");
+    // Feed grass/wheat/sugarcane
+    let fedItem = null;
+    if ((state.inventory.wheat ?? 0) >= 1) {
+      state.inventory.wheat -= 1;
+      fedItem = "wheat";
+    } else if ((state.inventory.sugarcane ?? 0) >= 1) {
+      state.inventory.sugarcane -= 1;
+      fedItem = "sugarcane";
+    } else {
+      fail("need at least 1 wheat or sugarcane to feed Lakshmi");
+    }
+
+    state.flags.cowFedToday = true;
+    return `Fed Lakshmi fresh ${fedItem}! She lets out a warm, contented low and nudges your hand.`;
+  },
+
+  MILK_COW(state) {
+    if (!state.flags.cowFedToday) fail("Lakshmi needs to be fed sweet grass or wheat before giving fresh milk");
+    if (state.flags.milkCollectedToday) fail("Lakshmi has already been milked today. Come back tomorrow morning!");
+
+    state.flags.milkCollectedToday = true;
+    addItem(state, "milk", 2);
+    return "Gentle hands at the udder: collected 2 clay pots of fresh, frothy cow milk!";
+  },
+
+  PET_DOG(state) {
+    state.flags.dogPetToday = true;
+    return "Patted Sheru behind his ears! He wags his tail enthusiastically and barks happily.";
   },
 
   BUY(state, e) {
@@ -486,6 +581,9 @@ const playerEvents = {
       weatherChangesToday: 0,
       flowersToday: 0,
       sluiceOpen: false, // sluice resets at dawn
+      cowFedToday: false,
+      milkCollectedToday: false,
+      dogPetToday: false,
     });
     return `Day ${state.day} begins (${state.weather})`;
   },

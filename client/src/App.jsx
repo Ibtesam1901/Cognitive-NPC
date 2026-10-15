@@ -36,6 +36,8 @@ import { StoryModal } from "./components/StoryModal.jsx";
 import { QuestTrackerHUD } from "./components/QuestTrackerHUD.jsx";
 import { TouchJoystick } from "./components/TouchJoystick.jsx";
 import { MarketModal } from "./components/MarketModal.jsx";
+import { KitchenModal } from "./components/KitchenModal.jsx";
+import { SalimChatModal } from "./components/SalimChatModal.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import { audioManager } from "./utils/audioManager.js";
 import "./App.css";
@@ -105,6 +107,8 @@ export default function App() {
   const [joystickInput, setJoystickInput] = useState(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [showMarket, setShowMarket] = useState(false);
+  const [showKitchen, setShowKitchen] = useState(false);
+  const [showSalimChat, setShowSalimChat] = useState(false);
 
   useEffect(() => {
     const checkTouch = () => {
@@ -563,11 +567,32 @@ export default function App() {
                 isSpeaking={isThinking}
                 messages={messages}
                 isThinking={isThinking}
-                onSendMessage={handleSendMessage}
-                voiceEnabled={voiceEnabled}
-                onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
+                onOpenMarket={() => setShowMarket(true)}
+                onOpenKitchen={() => setShowKitchen(true)}
+                onOpenSalimChat={() => setShowSalimChat(true)}
+                onPetDog={() => {
+                  sound.playPop();
+                  handleFarmAction("PET_DOG");
+                }}
                 onInspectHotspot={(id) => {
-                  showToast(`Inspected 3D Hotspot: ${id}`, "info");
+                  if (id === "lakshmi_cow") {
+                    // Check if cow is fed
+                    if (!npcState?.flags?.cowFedToday) {
+                      sound.playChime();
+                      handleFarmAction("FEED_COW");
+                    } else if (!npcState?.flags?.milkCollectedToday) {
+                      sound.playChime();
+                      handleFarmAction("MILK_COW");
+                    } else {
+                      showToast("Lakshmi is resting happily and chewing cud. Come back tomorrow!", "info");
+                    }
+                  } else if (id === "village_chulha") {
+                    setShowKitchen(true);
+                  } else if (id === "salim_stall") {
+                    setShowSalimChat(true);
+                  } else {
+                    showToast(`Inspected 3D Hotspot: ${id}`, "info");
+                  }
                 }}
                 onWellClick={() => {
                   const now = Date.now();
@@ -777,6 +802,27 @@ export default function App() {
           sound.playChime();
           handleFarmAction("SELL", { item, qty });
         }}
+      />
+
+      {/* Village Kitchen & Cooking Chulha Modal */}
+      <KitchenModal
+        isOpen={showKitchen}
+        onClose={() => setShowKitchen(false)}
+        inventory={npcState?.inventory || {}}
+        gold={npcState?.gold ?? 100}
+        onCookRecipe={(recipe) => {
+          sound.playChime();
+          confetti({ particleCount: 35, spread: 60, origin: { y: 0.6 } });
+          handleFarmAction("COOK", { recipe });
+        }}
+      />
+
+      {/* Salim the Merchant LLM Dialogue Modal */}
+      <SalimChatModal
+        isOpen={showSalimChat}
+        onClose={() => setShowSalimChat(false)}
+        onOpenTrade={() => setShowMarket(true)}
+        apiBase={API}
       />
 
       {/* Reset Farm Confirmation Modal */}

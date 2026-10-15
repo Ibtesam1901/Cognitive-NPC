@@ -22,7 +22,7 @@ function isValidEngineState(state) {
     state &&
     typeof state === "object" &&
     Array.isArray(state.plots) &&
-    state.plots.length === 3 &&
+    state.plots.length >= 3 &&
     "locked" in state.plots[0] &&
     state.inventory &&
     typeof state.inventory === "object" &&

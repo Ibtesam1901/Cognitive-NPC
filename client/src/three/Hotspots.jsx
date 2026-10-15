@@ -92,6 +92,57 @@ export function Hotspots({
           </button>
         </Html>
       </group>
+
+      {/* Hotspot 5: Lakshmi the Cow */}
+      <group position={[5.2, 1.4, 0.2]}>
+        <Html center distanceFactor={10} zIndexRange={[100, 0]}>
+          <button
+            className="three-hotspot-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onInspect) onInspect("lakshmi_cow");
+            }}
+            title="Lakshmi the Cow - Feed and Milk"
+          >
+            <span className="hotspot-icon">🐄</span>
+            <span className="hotspot-text">Lakshmi</span>
+          </button>
+        </Html>
+      </group>
+
+      {/* Hotspot 6: Village Kitchen Chulha */}
+      <group position={[-1.8, 1.2, 0.5]}>
+        <Html center distanceFactor={10} zIndexRange={[100, 0]}>
+          <button
+            className="three-hotspot-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onInspect) onInspect("village_chulha");
+            }}
+            title="Village Cooking Chulha Hearth"
+          >
+            <span className="hotspot-icon">🍲</span>
+            <span className="hotspot-text">Cooking Hearth</span>
+          </button>
+        </Html>
+      </group>
+
+      {/* Hotspot 7: Salim's Market Caravan */}
+      <group position={[9.5, 2.2, 0.5]}>
+        <Html center distanceFactor={10} zIndexRange={[100, 0]}>
+          <button
+            className="three-hotspot-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onInspect) onInspect("salim_stall");
+            }}
+            title="Salim's Trading Caravan"
+          >
+            <span className="hotspot-icon">⛺</span>
+            <span className="hotspot-text">Salim's Stall</span>
+          </button>
+        </Html>
+      </group>
     </group>
   );
 }

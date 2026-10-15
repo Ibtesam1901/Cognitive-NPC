@@ -287,3 +287,72 @@ test("canal sluice gate hydrates planted plots", () => {
   assert.equal(s.flags.sluiceOpen, false);
 });
 
+test("animal husbandry: feeding and milking Lakshmi the cow", () => {
+  const s = createInitialState();
+  // Cannot milk before feeding
+  const earlyMilk = ev(s, "MILK_COW");
+  assert.equal(earlyMilk.ok, false);
+
+  // Feed wheat to Lakshmi
+  s.inventory.wheat = 2;
+  const feedRes = ev(s, "FEED_COW");
+  assert.equal(feedRes.ok, true);
+  assert.equal(s.inventory.wheat, 1);
+  assert.equal(s.flags.cowFedToday, true);
+
+  // Milk Lakshmi
+  const milkRes = ev(s, "MILK_COW");
+  assert.equal(milkRes.ok, true);
+  assert.equal(s.inventory.milk, 2);
+  assert.equal(s.flags.milkCollectedToday, true);
+
+  // Cannot milk twice in the same day
+  const doubleMilk = ev(s, "MILK_COW");
+  assert.equal(doubleMilk.ok, false);
+
+  // Pet Sheru the dog
+  const petRes = ev(s, "PET_DOG");
+  assert.equal(petRes.ok, true);
+  assert.equal(s.flags.dogPetToday, true);
+
+  // Dawn resets daily limits
+  ev(s, "NEXT_DAY");
+  assert.equal(s.flags.cowFedToday, false);
+  assert.equal(s.flags.milkCollectedToday, false);
+});
+
+test("cooking recipes: bake roti and brew festive kheer", () => {
+  const s = createInitialState();
+  s.inventory.wheat = 2;
+  s.inventory.rice = 1;
+  s.inventory.milk = 1;
+  s.inventory.sugarcane = 2;
+
+  // 1. Bake Roti
+  const rotiRes = ev(s, "COOK", { recipe: "roti" });
+  assert.equal(rotiRes.ok, true);
+  assert.equal(s.inventory.wheat, 1);
+  assert.equal(s.inventory.roti, 2);
+
+  // 2. Boil Jaggery (Gur) from sugarcane
+  const gurRes = ev(s, "COOK", { recipe: "gur" });
+  assert.equal(gurRes.ok, true);
+  assert.equal(s.inventory.sugarcane, 0);
+  assert.equal(s.inventory.gur, 1);
+
+  // 3. Cook festive Kheer (needs rice, milk, gur)
+  const kheerRes = ev(s, "COOK", { recipe: "kheer" });
+  assert.equal(kheerRes.ok, true);
+  assert.equal(s.inventory.rice, 0);
+  assert.equal(s.inventory.milk, 0);
+  assert.equal(s.inventory.gur, 0);
+  assert.equal(s.inventory.kheer, 1);
+
+  // 4. Sell cooked kheer to merchant
+  const sellKheer = ev(s, "SELL", { item: "kheer", qty: 1 });
+  assert.equal(sellKheer.ok, true);
+  assert.equal(s.inventory.kheer, 0);
+  assert.equal(s.gold, 100 + 75); // 75 gold base value
+});
+
+
