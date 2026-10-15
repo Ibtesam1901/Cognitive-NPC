@@ -24,8 +24,12 @@ export function HutAndProps({
     };
   }, []);
 
-  const hasSeeds = inventory.includes("seeds");
-  const hasMap = inventory.includes("old_map");
+  const hasSeeds = Array.isArray(inventory)
+    ? inventory.includes("seeds")
+    : Boolean(inventory && inventory.seeds && inventory.seeds > 0);
+  const hasMap = Array.isArray(inventory)
+    ? inventory.includes("old_map")
+    : Boolean(inventory && inventory.old_map && inventory.old_map > 0);
 
   return (
     <group position={position}>

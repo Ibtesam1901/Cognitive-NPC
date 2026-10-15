@@ -2,20 +2,47 @@ import React, { useMemo } from "react";
 import * as THREE from "three";
 
 /**
- * Procedural Dead Banyan Tree (Key story landmark where Lakshmi went missing):
+ * Procedural Banyan Tree (Key story landmark):
  * - Gnarled multi-stem trunks
  * - Sprawling twisted bare branches
  * - Hanging aerial roots
+ * - Dynamic green foliage that sprouts and grows lush as trust increases
  * - Hoofprints on the dusty ground nearby
  */
-export function DeadBanyanTree({ position = [-5.2, 0, -5.5] }) {
+export function DeadBanyanTree({ position = [-5.2, 0, -5.5], trust = 0 }) {
   const materials = useMemo(() => {
     return {
       bark: new THREE.MeshStandardMaterial({ color: "#3d2b1f", roughness: 0.95 }),
       roots: new THREE.MeshStandardMaterial({ color: "#543d2b", roughness: 0.9 }),
       hoofprint: new THREE.MeshStandardMaterial({ color: "#29180c", roughness: 1.0 }),
+      leaves: new THREE.MeshStandardMaterial({
+        color: trust >= 6 ? "#15803d" : "#22c55e",
+        roughness: 0.7,
+        flatShading: true,
+      }),
+      blossom: new THREE.MeshStandardMaterial({
+        color: "#fbbf24",
+        roughness: 0.6,
+      }),
     };
+  }, [trust]);
+
+  // Leaf cluster positions at branch ends
+  const leafClusters = useMemo(() => {
+    return [
+      { pos: [1.6, 3.5, 0.9], scale: 0.6 },
+      { pos: [-1.7, 3.4, -0.8], scale: 0.65 },
+      { pos: [0.5, 3.8, -1.7], scale: 0.7 },
+      { pos: [-0.4, 3.3, 0.8], scale: 0.55 },
+      { pos: [0.8, 3.0, 0.5], scale: 0.5 },
+      { pos: [0, 4.0, -0.3], scale: 0.8 },
+      { pos: [-1.0, 3.7, 0.2], scale: 0.6 },
+      { pos: [1.2, 3.9, -0.7], scale: 0.65 },
+    ];
   }, []);
+
+  // Growth scale multiplier based on trust (0-2: bare/dead, 3-5: early sprout, 6+: lush canopy)
+  const leafScale = trust < 2 ? 0 : Math.min(1.2, 0.35 + (trust - 2) * 0.15);
 
   return (
     <group position={position}>
@@ -65,6 +92,31 @@ export function DeadBanyanTree({ position = [-5.2, 0, -5.5] }) {
       <mesh position={[0.3, 1.5, -1.0]} rotation={[-0.06, 0, 0.03]} castShadow material={materials.roots}>
         <cylinderGeometry args={[0.03, 0.02, 2.8, 4]} />
       </mesh>
+
+      {/* Dynamic Foliage: Sprouting banyan leaves based on player trust */}
+      {leafScale > 0 &&
+        leafClusters.map((cluster, i) => (
+          <group
+            key={i}
+            position={cluster.pos}
+            scale={[cluster.scale * leafScale, cluster.scale * leafScale, cluster.scale * leafScale]}
+          >
+            {/* Primary low-poly leaf puff */}
+            <mesh castShadow receiveShadow material={materials.leaves}>
+              <dodecahedronGeometry args={[0.55, 0]} />
+            </mesh>
+            {/* Secondary offset clump for natural canopy */}
+            <mesh position={[0.2, 0.15, 0.1]} material={materials.leaves}>
+              <icosahedronGeometry args={[0.4, 0]} />
+            </mesh>
+            {/* Sacred banyan blossom buds when trust is very high */}
+            {trust >= 5 && (
+              <mesh position={[0, 0.35, 0.1]} material={materials.blossom}>
+                <sphereGeometry args={[0.08, 5, 4]} />
+              </mesh>
+            )}
+          </group>
+        ))}
 
       {/* Cow Hoofprints in Soil (visual clue corresponding to the surveyor map) */}
       <group position={[0.8, 0.02, 1.2]} rotation={[0, -0.3, 0]}>

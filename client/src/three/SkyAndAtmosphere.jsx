@@ -2,80 +2,181 @@ import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-// Deterministic pseudo-random generator to satisfy purity and prevent render jitter
 function pseudoRandom(seed) {
   const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
   return x - Math.floor(x);
 }
 
 /**
- * Warm Golden-Hour Atmosphere:
- * - Directional sunlight casting long evening shadows
- * - Sunlight warmth derived from farmHealth
- * - Procedural circling crows above the dead banyan
- * - Golden floating dust motes drifting across the diorama
+ * Dynamic Sky, Sun, Rain, Storm Clouds & Atmosphere
+ * Reacts to:
+ * - weather: "clear", "rain", "drought", "overcast"
+ * - time: 0-23 hour of day (morning bright, noon overhead, evening warm sunset, night dark)
+ * - farmHealth: environmental lushness factor
  */
 export function SkyAndAtmosphere({
+  weather = "clear",
+  time = 8,
   farmHealth = 20,
   quality = "medium",
   reducedMotion = false,
 }) {
   const crowsGroupRef = useRef();
   const dustRef = useRef();
+  const rainRef = useRef();
+  const cloudsRef = useRef();
 
-  // Dust count based on quality setting
-  const dustCount = quality === "high" ? 40 : quality === "medium" ? 22 : 0;
+  const isRaining = weather === "rain";
+  const isDrought = weather === "drought";
+  const isNight = time < 5 || time >= 20;
+  const isDawnOrDusk = (time >= 5 && time < 8) || (time >= 17 && time < 20);
 
-  // Initialize deterministic dust particles
+  // Rain drop particle system (260 particles falling down and wrapping)
+  const rainCount = isRaining ? (quality === "high" ? 360 : 220) : 0;
+  const rainPositions = useMemo(() => {
+    if (rainCount === 0) return null;
+    const pos = new Float32Array(rainCount * 3);
+    for (let i = 0; i < rainCount; i++) {
+      pos[i * 3] = (pseudoRandom(i * 3 + 10) - 0.5) * 16;
+      pos[i * 3 + 1] = pseudoRandom(i * 3 + 20) * 8;
+      pos[i * 3 + 2] = (pseudoRandom(i * 3 + 30) - 0.5) * 16;
+    }
+    return pos;
+  }, [rainCount]);
+
+  // Dust motes count (increased in drought or high heat)
+  const dustCount = isRaining
+    ? 0
+    : isDrought
+    ? quality === "high"
+      ? 70
+      : 40
+    : quality === "high"
+    ? 35
+    : 18;
+
   const dustPositions = useMemo(() => {
     if (dustCount === 0) return null;
     const pos = new Float32Array(dustCount * 3);
     for (let i = 0; i < dustCount; i++) {
       pos[i * 3] = (pseudoRandom(i * 3 + 1) - 0.5) * 14;
-      pos[i * 3 + 1] = 0.5 + pseudoRandom(i * 3 + 2) * 3.5;
+      pos[i * 3 + 1] = 0.4 + pseudoRandom(i * 3 + 2) * 3.6;
       pos[i * 3 + 2] = (pseudoRandom(i * 3 + 3) - 0.5) * 12;
     }
     return pos;
   }, [dustCount]);
 
+  // Frame animation for rain, clouds, crows, dust
   useFrame((state, delta) => {
-    // Circling crows high above the farm
+    // Circling crows
     if (crowsGroupRef.current && !reducedMotion) {
       crowsGroupRef.current.rotation.y += delta * 0.35;
     }
 
-    // Drifting golden dust motes
+    // Drifting rain drops
+    if (rainRef.current && rainPositions && !reducedMotion) {
+      const positions = rainRef.current.geometry.attributes.position.array;
+      for (let i = 0; i < rainCount; i++) {
+        positions[i * 3 + 1] -= delta * 12; // fall speed
+        // Add slight wind angle in rain
+        positions[i * 3] -= delta * 1.5;
+        if (positions[i * 3 + 1] < -0.1) {
+          positions[i * 3 + 1] = 7.5;
+          positions[i * 3] = (pseudoRandom(i * 7 + state.clock.elapsedTime) - 0.5) * 16;
+        }
+      }
+      rainRef.current.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Drifting dust motes
     if (dustRef.current && dustPositions && !reducedMotion) {
       const positions = dustRef.current.geometry.attributes.position.array;
-      const time = state.clock.elapsedTime;
+      const t = state.clock.elapsedTime;
+      const speed = isDrought ? 0.006 : 0.0025;
       for (let i = 0; i < dustCount; i++) {
-        // Subtle drift in x and y
-        positions[i * 3 + 1] += Math.sin(time + i) * 0.003;
-        positions[i * 3] += Math.cos(time * 0.5 + i) * 0.002;
+        positions[i * 3 + 1] += Math.sin(t + i) * speed;
+        positions[i * 3] += Math.cos(t * 0.5 + i) * speed + (isDrought ? 0.003 : 0);
         if (positions[i * 3 + 1] > 4.2) positions[i * 3 + 1] = 0.5;
         if (positions[i * 3 + 1] < 0.3) positions[i * 3 + 1] = 4.0;
+        if (positions[i * 3] > 7) positions[i * 3] = -7;
       }
       dustRef.current.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Drifting clouds overhead
+    if (cloudsRef.current && !reducedMotion) {
+      cloudsRef.current.position.x += delta * 0.12;
+      if (cloudsRef.current.position.x > 8) {
+        cloudsRef.current.position.x = -8;
+      }
     }
   });
 
   const enableShadows = quality !== "low";
 
-  // Derive sun warmth from farmHealth
-  const sunIntensity = 1.4 + (farmHealth / 100) * 0.6;
-  const sunColor = farmHealth > 50 ? "#fbbf24" : "#f59e0b";
+  // Compute dynamic lighting parameters based on weather & time
+  const { ambientColor, ambientIntensity, sunColor, sunIntensity, sunPos } = useMemo(() => {
+    if (isRaining) {
+      return {
+        ambientColor: "#64748b",
+        ambientIntensity: 0.55,
+        sunColor: "#94a3b8",
+        sunIntensity: 0.65,
+        sunPos: [4, 8, 3],
+      };
+    }
+
+    if (isDrought) {
+      return {
+        ambientColor: "#fed7aa",
+        ambientIntensity: 0.85,
+        sunColor: "#f97316", // scorching orange-red sun
+        sunIntensity: 2.2,
+        sunPos: [6, 9, 4],
+      };
+    }
+
+    if (isNight) {
+      return {
+        ambientColor: "#1e1b4b", // deep midnight blue
+        ambientIntensity: 0.3,
+        sunColor: "#818cf8", // pale silver moonlight
+        sunIntensity: 0.45,
+        sunPos: [-6, 7, -4],
+      };
+    }
+
+    if (isDawnOrDusk) {
+      return {
+        ambientColor: "#ffedd5",
+        ambientIntensity: 0.7,
+        sunColor: "#f59e0b", // warm amber sunset
+        sunIntensity: 1.5 + (farmHealth / 100) * 0.4,
+        sunPos: [8, 4.5, 6],
+      };
+    }
+
+    // Standard Clear Daytime (8am - 5pm)
+    return {
+      ambientColor: "#fef3c7",
+      ambientIntensity: 0.72,
+      sunColor: farmHealth > 50 ? "#fef08a" : "#fbbf24",
+      sunIntensity: 1.6 + (farmHealth / 100) * 0.5,
+      sunPos: [6, 8, 5],
+    };
+  }, [isRaining, isDrought, isNight, isDawnOrDusk, farmHealth]);
 
   return (
     <>
-      {/* Warm Ambient Fill Light */}
-      <ambientLight intensity={0.65} color="#fef3c7" />
+      {/* Ambient Fill Light */}
+      <ambientLight intensity={ambientIntensity} color={ambientColor} />
 
-      {/* Golden-Hour Sun Directional Light */}
+      {/* Main Directional Sun / Moon / Storm Light */}
       <directionalLight
-        position={[8, 7, 6]}
+        position={sunPos}
         intensity={sunIntensity}
         color={sunColor}
-        castShadow={enableShadows}
+        castShadow={enableShadows && !isRaining}
         shadow-mapSize-width={quality === "high" ? 1024 : 512}
         shadow-mapSize-height={quality === "high" ? 1024 : 512}
         shadow-camera-far={25}
@@ -86,36 +187,80 @@ export function SkyAndAtmosphere({
         shadow-bias={-0.0005}
       />
 
-      {/* Soft Sky Blue / Sunset Opposite Fill */}
-      <directionalLight position={[-6, 4, -5]} intensity={0.35} color="#93c5fd" />
+      {/* Opposite Fill Light */}
+      <directionalLight
+        position={[-sunPos[0], 4, -sunPos[2]]}
+        intensity={isRaining ? 0.35 : 0.25}
+        color={isRaining ? "#38bdf8" : isNight ? "#312e81" : "#93c5fd"}
+      />
 
-      {/* Circling Crows High Above Dead Banyan */}
-      <group ref={crowsGroupRef} position={[-4.5, 5.2, -4.5]}>
+      {/* Floating Volumetric Cloud Formations */}
+      <group ref={cloudsRef} position={[-2, 6.2, -1]}>
         {[
-          { radius: 2.2, angle: 0, height: 0 },
-          { radius: 2.6, angle: 2.1, height: 0.4 },
-          { radius: 1.8, angle: 4.2, height: -0.3 },
-        ].map((crow, idx) => {
-          const x = Math.cos(crow.angle) * crow.radius;
-          const z = Math.sin(crow.angle) * crow.radius;
-          return (
-            <group key={idx} position={[x, crow.height, z]} rotation={[0, -crow.angle + Math.PI / 2, 0]}>
-              {/* Crow Body */}
-              <mesh>
-                <boxGeometry args={[0.08, 0.05, 0.2]} />
-                <meshBasicMaterial color="#1e293b" />
-              </mesh>
-              {/* Wings */}
-              <mesh position={[0, 0.02, 0]}>
-                <boxGeometry args={[0.42, 0.01, 0.1]} />
-                <meshBasicMaterial color="#0f172a" />
-              </mesh>
-            </group>
-          );
-        })}
+          { pos: [-4, 0, -2], s: [2.5, 0.7, 1.8] },
+          { pos: [0, 0.3, 0], s: [3.2, 0.9, 2.2] },
+          { pos: [3.8, -0.2, 1.5], s: [2.8, 0.8, 1.9] },
+        ].map((c, i) => (
+          <mesh key={i} position={c.pos} scale={c.s}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial
+              color={isRaining ? "#334155" : isDrought ? "#fdba74" : "#ffffff"}
+              transparent
+              opacity={isRaining ? 0.92 : 0.75}
+              roughness={0.9}
+            />
+          </mesh>
+        ))}
       </group>
 
-      {/* Drifting Golden Dust Motes */}
+      {/* Rain Particle System */}
+      {isRaining && rainPositions && (
+        <points ref={rainRef}>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              count={rainPositions.length / 3}
+              array={rainPositions}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <pointsMaterial
+            size={0.12}
+            color="#38bdf8"
+            transparent
+            opacity={0.8}
+            depthWrite={false}
+          />
+        </points>
+      )}
+
+      {/* Circling Crows High Above Dead Banyan */}
+      {!isRaining && (
+        <group ref={crowsGroupRef} position={[-4.5, 5.2, -4.5]}>
+          {[
+            { radius: 2.2, angle: 0, height: 0 },
+            { radius: 2.6, angle: 2.1, height: 0.4 },
+            { radius: 1.8, angle: 4.2, height: -0.3 },
+          ].map((crow, idx) => {
+            const x = Math.cos(crow.angle) * crow.radius;
+            const z = Math.sin(crow.angle) * crow.radius;
+            return (
+              <group key={idx} position={[x, crow.height, z]} rotation={[0, -crow.angle + Math.PI / 2, 0]}>
+                <mesh>
+                  <boxGeometry args={[0.08, 0.05, 0.2]} />
+                  <meshBasicMaterial color="#1e293b" />
+                </mesh>
+                <mesh position={[0, 0.02, 0]}>
+                  <boxGeometry args={[0.42, 0.01, 0.1]} />
+                  <meshBasicMaterial color="#0f172a" />
+                </mesh>
+              </group>
+            );
+          })}
+        </group>
+      )}
+
+      {/* Dust motes (warm amber motes or drought dust storm) */}
       {dustPositions && (
         <points ref={dustRef}>
           <bufferGeometry>
@@ -127,10 +272,10 @@ export function SkyAndAtmosphere({
             />
           </bufferGeometry>
           <pointsMaterial
-            size={0.06}
-            color="#fef08a"
+            size={isDrought ? 0.09 : 0.06}
+            color={isDrought ? "#ea580c" : "#fef08a"}
             transparent
-            opacity={0.65}
+            opacity={isDrought ? 0.75 : 0.65}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
           />

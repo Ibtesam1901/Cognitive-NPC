@@ -17,15 +17,24 @@ import { usePrefersReducedMotion } from "../utils/motion.js";
  * 3D "Bhima's Hollow" Scene with Raghu the Farmer
  *
  * READ-ONLY VISUAL LAYER:
- * Receives existing game state (trust, mood, farmHealth, quests, inventory, flags, speaking)
- * and never mutates game state itself.
+ * Receives live game state:
+ * - weather ("clear", "rain", "drought", "overcast")
+ * - day (int)
+ * - time (0-23 hour of day)
+ * - plots (array of {id, locked, crop, growth, watered})
+ * - trust (int)
+ * - mood ("happy", "neutral", "annoyed", "worried", "proud")
+ * - quests & inventory & flags
  */
 export default function FarmScene({
   trust = 0,
   mood = "neutral",
-  farmHealth = 20,
+  weather = "clear",
+  day = 1,
+  time = 8,
+  plots = [],
   quests = [],
-  inventory = [],
+  inventory = {},
   flags = {},
   isSpeaking = false,
   quality = "medium", // 'low' | 'medium' | 'high'
@@ -56,6 +65,11 @@ export default function FarmScene({
   const isPumpRunning = Boolean(flags.pump_repaired);
   const isCowFound = Boolean(flags.found_cow);
 
+  // Calculate overall farm health derived from live plots and trust
+  const activeCropsCount = plots.filter((p) => p.crop).length;
+  const matureCropsCount = plots.filter((p) => p.crop && p.growth >= 2).length;
+  const farmHealth = Math.min(100, 20 + activeCropsCount * 15 + matureCropsCount * 15 + trust * 4);
+
   return (
     <WebGLBoundary onFallback={onFallback}>
       <div className="three-scene-wrapper" aria-hidden="true">
@@ -71,8 +85,10 @@ export default function FarmScene({
               preserveDrawingBuffer: false,
             }}
           >
-            {/* Environment, Sky & Golden-Hour Lighting */}
+            {/* Dynamic Sky, Sun, Rain & Atmosphere */}
             <SkyAndAtmosphere
+              weather={weather}
+              time={time}
               farmHealth={farmHealth}
               quality={quality}
               reducedMotion={reducedMotion}
@@ -81,15 +97,16 @@ export default function FarmScene({
             {/* Farmhouse Porch & Inventory Clues */}
             <HutAndProps inventory={inventory} />
 
-            {/* Terrain, Dynamic Canal & Crops */}
+            {/* Dynamic Farmland Diorama: Per-plot crops, puddles, locked gates */}
             <Terrain
-              farmHealth={farmHealth}
+              plots={plots}
+              weather={weather}
               isPumpRunning={isPumpRunning}
               reducedMotion={reducedMotion}
             />
 
-            {/* Ancient Dead Banyan Landmark */}
-            <DeadBanyanTree />
+            {/* Ancient Banyan: Sprouts lush green foliage with player trust */}
+            <DeadBanyanTree trust={trust} />
 
             {/* Antique Irrigation Diesel Pump */}
             <IrrigationPump
@@ -128,7 +145,7 @@ export default function FarmScene({
               minDistance={4.5}
               maxDistance={14.0}
               minPolarAngle={Math.PI / 6}
-              maxPolarAngle={Math.PI / 2 - 0.08} // Prevent looking through ground plane
+              maxPolarAngle={Math.PI / 2 - 0.08}
               dampingFactor={0.05}
               autoRotate={!reducedMotion && !isSpeaking}
               autoRotateSpeed={0.25}

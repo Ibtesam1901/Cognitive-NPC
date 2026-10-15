@@ -326,12 +326,16 @@ export default function App() {
           <div className="three-d-canvas-box">
             <Suspense fallback={<div className="three-loading">Rendering 3D fields...</div>}>
               <FarmScene
-                state={{
-                  farmHealth: 50,
-                  weather: npcState?.weather || "clear",
-                  puzzles: {},
-                  flags: {},
-                }}
+                trust={npcState?.npc?.trust ?? 0}
+                mood={npcState?.npc?.mood || "neutral"}
+                weather={npcState?.weather || "clear"}
+                day={npcState?.day ?? 1}
+                time={npcState?.time ?? 8}
+                plots={npcState?.plots || []}
+                quests={npcState?.quests || []}
+                inventory={npcState?.inventory || {}}
+                flags={npcState?.flags || {}}
+                isSpeaking={isThinking}
                 onInspectHotspot={(id) => {
                   showToast(`Inspected 3D Hotspot: ${id}`, "info");
                 }}
