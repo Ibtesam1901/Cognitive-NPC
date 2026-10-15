@@ -37,6 +37,11 @@ export default function FarmScene({
   inventory = {},
   flags = {},
   isSpeaking = false,
+  latestRaghuMessage = "",
+  isThinking = false,
+  onSendMessage,
+  voiceEnabled = true,
+  onToggleVoice,
   quality = "medium", // 'low' | 'medium' | 'high'
   onFallback,
   onInspectHotspot,
@@ -121,12 +126,17 @@ export default function FarmScene({
               reducedMotion={reducedMotion}
             />
 
-            {/* Low-Poly Animated Raghu */}
+            {/* Low-Poly Animated Raghu with Floating 3D Dialogue */}
             <RaghuModel
               trust={trust}
               mood={mood}
               isSpeaking={isSpeaking}
               reducedMotion={reducedMotion}
+              latestRaghuMessage={latestRaghuMessage}
+              isThinking={isThinking}
+              onSendMessage={onSendMessage}
+              voiceEnabled={voiceEnabled}
+              onToggleVoice={onToggleVoice}
             />
 
             {/* 3D Hotspot Interactive Billboards */}

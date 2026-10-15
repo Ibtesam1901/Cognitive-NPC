@@ -336,6 +336,13 @@ export default function App() {
                 inventory={npcState?.inventory || {}}
                 flags={npcState?.flags || {}}
                 isSpeaking={isThinking}
+                latestRaghuMessage={
+                  [...messages].reverse().find((m) => m.role === "raghu")?.text || ""
+                }
+                isThinking={isThinking}
+                onSendMessage={handleSendMessage}
+                voiceEnabled={voiceEnabled}
+                onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
                 onInspectHotspot={(id) => {
                   showToast(`Inspected 3D Hotspot: ${id}`, "info");
                 }}

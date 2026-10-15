@@ -4310,7 +4310,7 @@
 
 .three-d-canvas-box {
   width: 100%;
-  height: 480px;
+  height: 540px;
   position: relative;
 }
 
@@ -4569,3 +4569,174 @@
 }
 .entry-applied .entry-status  { color: #34d399; }
 .entry-rejected .entry-status { color: #f87171; }
+
+/* ==========================================================================
+   3D IN-WORLD CHARACTER DIALOGUE & SPEECH BUBBLE
+   ========================================================================== */
+
+.raghu-3d-speech-bubble {
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 14px;
+  padding: 12px 14px;
+  width: 290px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(245, 158, 11, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: text;
+  pointer-events: auto;
+  position: relative;
+  animation: floatBubble 3s ease-in-out infinite alternate;
+}
+
+@keyframes floatBubble {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+/* Speech bubble bottom pointer carrot pointing to Raghu's turban */
+.raghu-3d-speech-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(15, 23, 42, 0.94);
+}
+
+.speech-bubble-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 4px;
+}
+
+.raghu-3d-name {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #fbbf24;
+}
+
+.raghu-3d-mood {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.raghu-3d-mood.mood-happy { color: #34d399; }
+.raghu-3d-mood.mood-annoyed,
+.raghu-3d-mood.mood-angry { color: #f87171; }
+.raghu-3d-mood.mood-worried { color: #fbbf24; }
+.raghu-3d-mood.mood-neutral { color: #94a3b8; }
+.raghu-3d-mood.mood-proud { color: #a78bfa; }
+
+.raghu-3d-voice-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.raghu-3d-voice-btn:hover {
+  color: #fbbf24;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.speech-bubble-text {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #f1f5f9;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.speech-bubble-text.is-thinking {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* 3D In-World Input Bar */
+.raghu-3d-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 4px 6px;
+}
+
+.raghu-3d-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.raghu-3d-input::placeholder {
+  color: #64748b;
+}
+
+.raghu-3d-send-btn {
+  background: #f59e0b;
+  border: none;
+  border-radius: 6px;
+  color: #0f172a;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.raghu-3d-send-btn:hover:not(:disabled) {
+  background: #fbbf24;
+  transform: scale(1.05);
+}
+
+.raghu-3d-send-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Quick Chips inside 3D Speech Bubble */
+.raghu-3d-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip-btn-3d {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chip-btn-3d:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #fff;
+}
+

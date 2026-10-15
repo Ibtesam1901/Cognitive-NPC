@@ -1,17 +1,26 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
+import { Send, Sparkles, Volume2, VolumeX, MessageSquare } from "lucide-react";
 
 /**
  * Procedural low-poly stylized model of Raghu the 62-year-old Farmer
- * Features: Saffron turban, white kurta/dhoti, salt-and-pepper beard, bamboo stick (lathi)
- * Reactive to: trust (positioning), mood (poses), isSpeaking (jaw/head articulation)
+ * Features:
+ * - Saffron turban, white kurta/dhoti, salt-and-pepper beard, bamboo stick (lathi)
+ * - Reactive to: trust (positioning), mood (poses), isSpeaking (jaw/head articulation)
+ * - Interactive 3D Speech Bubble & Quick Dialogue Input floating directly above Raghu's head
  */
 export function RaghuModel({
   trust = 0,
   mood = "neutral",
   isSpeaking = false,
   reducedMotion = false,
+  latestRaghuMessage = "",
+  isThinking = false,
+  onSendMessage,
+  voiceEnabled = true,
+  onToggleVoice,
 }) {
   const groupRef = useRef();
   const headRef = useRef();
@@ -20,6 +29,9 @@ export function RaghuModel({
   const rightArmRef = useRef();
   const chestRef = useRef();
   const stickRef = useRef();
+
+  const [inputVal, setInputVal] = useState("");
+  const [showInput, setShowInput] = useState(false);
 
   // Materials palette (reused across renders)
   const materials = useMemo(() => {
@@ -76,31 +88,30 @@ export function RaghuModel({
 
       switch (mood) {
         case "wary":
-          // Folded arms / guarded
           targetLeftRot = { x: 1.1, y: 0.5, z: 0.5 };
           targetRightRot = { x: 1.1, y: -0.5, z: -0.5 };
           break;
+        case "annoyed":
         case "angry":
-          // Stiff posture, right arm pointing forward/accusingly
           targetLeftRot = { x: 0.2, y: 0, z: 0.2 };
           targetRightRot = { x: 1.5, y: -0.2, z: 0 };
           break;
+        case "happy":
         case "grateful":
-          // Namaste / palms joined in front of chest, head slight bow
           targetLeftRot = { x: 1.2, y: 0.7, z: 0.2 };
           targetRightRot = { x: 1.2, y: -0.7, z: -0.2 };
           targetHeadRotY = 0;
           targetHeadRotZ = 0.05;
           break;
+        case "worried":
         case "suspicious":
-          // Head tilted, squinting pose
           targetHeadRotZ = 0.18;
           targetHeadRotY = -0.12;
           targetLeftRot = { x: 0.5, y: 0.3, z: 0.2 };
           targetRightRot = { x: 0.1, y: 0, z: -0.1 };
           break;
+        case "proud":
         case "friendly":
-          // Relaxed posture with gentle nod
           targetLeftRot = { x: 0.1, y: 0, z: 0.15 };
           targetRightRot = { x: 0.1, y: 0, z: -0.15 };
           if (!reducedMotion) {
@@ -129,8 +140,101 @@ export function RaghuModel({
     }
   });
 
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    const text = inputVal.trim();
+    if (!text || isThinking) return;
+    setInputVal("");
+    if (onSendMessage) onSendMessage(text);
+  };
+
+  const displayText = isThinking
+    ? "Thinking..."
+    : latestRaghuMessage || "Namaste, beta. Welcome to Bhima's Hollow.";
+
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
+      {/* ── 3D Interactive Dialogue Bubble & Input above Raghu's Head ── */}
+      <group position={[0, 2.75, 0]}>
+        <Html center distanceFactor={7.5} zIndexRange={[120, 0]}>
+          <div
+            className="raghu-3d-speech-bubble"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {/* Header / Mood Pill */}
+            <div className="speech-bubble-header">
+              <span className="raghu-3d-name">👴 Raghu</span>
+              <span className={`raghu-3d-mood mood-${mood}`}>[{mood}]</span>
+              {onToggleVoice && (
+                <button
+                  type="button"
+                  className="raghu-3d-voice-btn"
+                  onClick={onToggleVoice}
+                  title={voiceEnabled ? "Mute Voice" : "Enable Voice"}
+                >
+                  {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                </button>
+              )}
+            </div>
+
+            {/* Raghu's Live Spoken Text */}
+            <p className={`speech-bubble-text ${isThinking ? "is-thinking" : ""}`}>
+              {displayText}
+            </p>
+
+            {/* Quick Dialogue Form */}
+            {onSendMessage && (
+              <form className="raghu-3d-input-bar" onSubmit={handleSubmit}>
+                <input
+                  type="text"
+                  className="raghu-3d-input"
+                  placeholder="Speak to Raghu..."
+                  value={inputVal}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  disabled={isThinking}
+                />
+                <button
+                  type="submit"
+                  className="raghu-3d-send-btn"
+                  disabled={!inputVal.trim() || isThinking}
+                  title="Send message to Raghu"
+                >
+                  <Send size={12} />
+                </button>
+              </form>
+            )}
+
+            {/* Quick Suggestions Floating Chips */}
+            {onSendMessage && !isThinking && (
+              <div className="raghu-3d-quick-chips">
+                <button
+                  type="button"
+                  className="chip-btn-3d"
+                  onClick={() => onSendMessage("I want to start farming. Can you teach me how to grow wheat?")}
+                >
+                  🌱 Learn Wheat
+                </button>
+                <button
+                  type="button"
+                  className="chip-btn-3d"
+                  onClick={() => onSendMessage("Raghu, could you unlock another plot of land for me to cultivate?")}
+                >
+                  🔒 Unlock Land
+                </button>
+                <button
+                  type="button"
+                  className="chip-btn-3d"
+                  onClick={() => onSendMessage("Raghu, the canals are dry. Can we hold the village rain prayer?")}
+                >
+                  ⛈️ Rain Prayer
+                </button>
+              </div>
+            )}
+          </div>
+        </Html>
+      </group>
+
       {/* Torso / Kurta */}
       <group ref={chestRef} position={[0, 1.45, 0]}>
         <mesh material={materials.kurta} castShadow receiveShadow>
