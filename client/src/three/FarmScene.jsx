@@ -13,6 +13,7 @@ import { Hotspots } from "./Hotspots.jsx";
 import { VoxelTree } from "./VoxelTree.jsx";
 import { WebGLBoundary } from "./WebGLBoundary.jsx";
 import { ThreeLoadingScreen } from "./ThreeLoadingScreen.jsx";
+import { PlayerController } from "./PlayerController.jsx";
 import { usePrefersReducedMotion } from "../utils/motion.js";
 
 /**
@@ -51,6 +52,8 @@ export default function FarmScene({
   onNorthFieldClick,
   onWellClick,
   onMapClick,
+  onPlayerMove,
+  onFootstep,
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const [isTabVisible, setIsTabVisible] = useState(true);
@@ -82,8 +85,21 @@ export default function FarmScene({
   const [inputVal, setInputVal] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isNearRaghu, setIsNearRaghu] = useState(false);
+  const [showDialogue, setShowDialogue] = useState(true);
   const recognitionRef = useRef(null);
   const historyEndRef = useRef(null);
+
+  // E key to interact with Raghu when nearby
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === "KeyE" && isNearRaghu) {
+        setShowDialogue(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isNearRaghu]);
 
   const demoChips = [
     { label: "🌱 Learn Wheat", text: "I want to start farming. Can you teach me how to grow wheat?" },
@@ -245,24 +261,29 @@ export default function FarmScene({
               onMapClick={onMapClick}
             />
 
-            {/* Cinematic Camera Orbit with Strict Bounds */}
-            <OrbitControls
-              enablePan={false}
-              target={[-0.5, 0.8, 0]}
-              minDistance={4.5}
-              maxDistance={18.0}
-              minPolarAngle={Math.PI / 6}
-              maxPolarAngle={Math.PI / 2 - 0.08}
-              dampingFactor={0.05}
-              autoRotate={!reducedMotion && !isSpeaking}
-              autoRotateSpeed={0.2}
+            {/* 3rd-Person WASD Player Controller with Collision & Camera Tracking */}
+            <PlayerController
+              initialPosition={[-0.5, 0, 4.0]}
+              onPositionChange={onPlayerMove}
+              onProximityToRaghu={(isNear) => setIsNearRaghu(isNear)}
+              onFootstep={onFootstep}
+              enabled={true}
             />
           </Canvas>
         </Suspense>
 
+        {/* ── Contextual "Talk to Raghu" Prompt when walking nearby ── */}
+        {isNearRaghu && !showDialogue && (
+          <div className="player-talk-prompt">
+            <span className="talk-key-badge">E</span>
+            <span className="talk-text">Talk with Raghu</span>
+          </div>
+        )}
+
         {/* ── 3D In-World Character Dialogue HUD Overlaid on Raghu ── */}
-        <div className="world-raghu-dialogue-hud">
-          {/* Header Bar */}
+        {showDialogue && (
+          <div className="world-raghu-dialogue-hud">
+            {/* Header Bar */}
           <div className="hud-header">
             <div className="hud-profile-pill">
               <span className="hud-avatar">👴</span>
@@ -293,6 +314,15 @@ export default function FarmScene({
                   {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
                 </button>
               )}
+
+              <button
+                type="button"
+                className="hud-icon-btn"
+                onClick={() => setShowDialogue(false)}
+                title="Minimize Dialogue (Press E near Raghu to reopen)"
+              >
+                ✕
+              </button>
             </div>
           </div>
 
@@ -381,7 +411,8 @@ export default function FarmScene({
             </div>
           )}
         </div>
-      </div>
-    </WebGLBoundary>
+      )}
+    </div>
+  </WebGLBoundary>
   );
 }

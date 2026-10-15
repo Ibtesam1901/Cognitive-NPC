@@ -31,6 +31,7 @@ import { playVoice, stopVoice } from "./utils/voice.js";
 import { ChatPanel } from "./components/ChatPanel.jsx";
 import { FarmPanel } from "./components/FarmPanel.jsx";
 import { JournalPanel } from "./components/JournalPanel.jsx";
+import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import "./App.css";
 
 const FarmScene = lazy(() => import("./three/FarmScene.jsx"));
@@ -46,7 +47,7 @@ const sessionId =
   })();
 
 export default function App() {
-  const [npcState, setNpcState] = useState(null);
+  const [npcState, setNpcState] = useState(() => loadGameState());
   const [messages, setMessages] = useState([
     {
       role: "raghu",
@@ -70,6 +71,13 @@ export default function App() {
     localStorage.setItem("raghu_theme", theme);
   }, [theme]);
 
+  // Persist game state to localStorage whenever it changes
+  useEffect(() => {
+    if (npcState) {
+      saveGameState(npcState);
+    }
+  }, [npcState]);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
@@ -91,17 +99,23 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // 1. Fetch initial state
+  // 1. Fetch backend state to sync
   useEffect(() => {
     const fetchState = async () => {
       try {
         const res = await fetch(`${API}/api/npc/state?sessionId=${sessionId}`);
         if (res.ok) {
           const data = await res.json();
-          setNpcState(data.state);
+          if (data?.state) {
+            setNpcState((prev) => ({
+              ...prev,
+              ...data.state,
+              flags: { ...(prev?.flags || {}), ...(data.state?.flags || {}) },
+            }));
+          }
         }
       } catch (err) {
-        console.warn("Failed to load initial state:", err);
+        console.warn("Backend state sync unavailable, using local persistence:", err);
       }
     };
     fetchState();

@@ -3375,6 +3375,48 @@
   backdrop-filter: blur(8px);
 }
 
+/* ── Contextual "Press E to Talk" Prompt ── */
+.player-talk-prompt {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel-bg-solid);
+  border: 1px solid var(--accent-amber);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 0 16px rgba(245, 158, 11, 0.2);
+  pointer-events: auto;
+  animation: promptFloat 1.8s infinite ease-in-out;
+}
+
+@keyframes promptFloat {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
+}
+
+.talk-key-badge {
+  background: var(--accent-amber);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  line-height: 1;
+}
+
+.talk-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
 /* RPG Side Panels */
 .game-side-panel {
   height: 100%;
