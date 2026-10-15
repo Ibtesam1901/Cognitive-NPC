@@ -444,6 +444,11 @@ export function Terrain({
           { pos: [-2.5, 0, -1.2], s: [1.0, 0.02, 1.6] },
           { pos: [1.4, 0, 0.8], s: [1.6, 0.02, 0.8] },
           { pos: [2.8, 0, 0.8], s: [1.5, 0.02, 0.8] },
+          // East road leading across canal to Salim's Market
+          { pos: [4.4, 0, 0.8], s: [1.8, 0.02, 0.9] },
+          { pos: [6.2, 0, 0.8], s: [1.8, 0.02, 0.9] },
+          { pos: [8.0, 0, 0.6], s: [1.8, 0.02, 1.4] },
+          { pos: [9.5, 0, 0.5], s: [3.4, 0.02, 3.4] }, // Market courtyard flagstones
         ].map((tile, i) => (
           <mesh key={i} position={tile.pos} receiveShadow>
             <boxGeometry args={[tile.s[0], tile.s[1], tile.s[2]]} />

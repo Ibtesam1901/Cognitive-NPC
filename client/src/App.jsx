@@ -672,11 +672,12 @@ export default function App() {
                   if (x > -2.2 && x < 2.4 && z > -0.5 && z < 1.6) {
                     audioManager.playFootstep("wood");
                   }
-                  // Cobblestone walkway paths
+                  // Cobblestone walkway paths & East Market courtyard
                   else if (
                     (x > -0.8 && x < 0.4 && z > 1.2 && z < 3.2) ||
                     (x > -3.0 && x < -1.0 && z > 2.0 && z < 3.0) ||
-                    (x > -3.0 && x < -1.8 && z > -1.5 && z < 1.5)
+                    (x > -3.0 && x < -1.8 && z > -1.5 && z < 1.5) ||
+                    (x > 3.0 && x < 11.5 && z > -1.5 && z < 2.5) // East road to Market
                   ) {
                     audioManager.playFootstep("stone");
                   }

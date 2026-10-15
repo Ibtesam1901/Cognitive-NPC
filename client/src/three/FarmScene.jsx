@@ -234,11 +234,11 @@ export default function FarmScene({
             <VoxelTree position={[6.0, 0.35, -8.5]} scale={1.2} type="oak" />
             <VoxelTree position={[8.5, 0.35, -9.0]} scale={1.3} type="spruce" />
 
-            {/* East Border Orchard (Fruit / Apple Trees behind Barn) */}
+            {/* East Border Orchard (Fruit / Apple Trees shifted around Market) */}
             <VoxelTree position={[6.8, 0, -4.5]} scale={1.05} type="fruit" />
-            <VoxelTree position={[7.5, 0, -1.8]} scale={1.1} type="oak" />
-            <VoxelTree position={[7.2, 0, 1.5]} scale={1.0} type="fruit" />
-            <VoxelTree position={[6.5, 0, 4.2]} scale={1.05} type="birch" />
+            <VoxelTree position={[12.5, 0, -2.5]} scale={1.1} type="oak" />
+            <VoxelTree position={[12.5, 0, 3.5]} scale={1.0} type="fruit" />
+            <VoxelTree position={[7.5, 0, 4.8]} scale={1.05} type="birch" />
 
             {/* West Field Windbreak Trees (Sheltering the crops) */}
             <VoxelTree position={[-8.2, 0, -4.5]} scale={1.1} type="birch" />

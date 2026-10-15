@@ -191,11 +191,17 @@ export function FarmPanel({ farmState, onFarmAction, isActing }) {
           <h5>🎒 Helper's Bag</h5>
           <div className="inventory-items-row">
             {[
-              { icon: "🌱", key: "seeds",      label: "Seeds"       },
-              { icon: "🌾", key: "wheat",       label: "Wheat"       },
-              { icon: "💧", key: "water_can",   label: "Water Cans"  },
-              { icon: "🌿", key: "fertilizer",  label: "Fertilizer"  },
-              { icon: "🌸", key: "flowers",     label: "Flowers"     },
+              { icon: "🌱", key: "seeds",         label: "Wheat Seeds"   },
+              { icon: "🌾", key: "wheat",         label: "Wheat"         },
+              { icon: "🍚", key: "rice_seeds",    label: "Rice Seeds"    },
+              { icon: "🌾", key: "rice",          label: "Rice"          },
+              { icon: "🎋", key: "cane_cuttings", label: "Cane Cut."     },
+              { icon: "🎋", key: "sugarcane",     label: "Sugarcane"     },
+              { icon: "🌼", key: "marigold_seeds",label: "Marigold Seeds"},
+              { icon: "🏵️", key: "marigold",      label: "Marigolds"     },
+              { icon: "💧", key: "water_can",     label: "Water Cans"    },
+              { icon: "🌿", key: "fertilizer",    label: "Fertilizer"    },
+              { icon: "🌸", key: "flowers",       label: "Wildflowers"   },
             ].map(({ icon, key, label }) => (
               <div className="inv-item" key={key}>
                 <span className="inv-icon">{icon}</span>
@@ -209,14 +215,16 @@ export function FarmPanel({ farmState, onFarmAction, isActing }) {
         </div>
 
         <div className="market-block">
-          <h5><ShoppingBag size={14} /> Village Market</h5>
+          <h5><ShoppingBag size={14} /> Village Actions &amp; Sluice</h5>
           <div className="market-trade-row">
             <button
-              className="market-btn sell-wheat-btn"
-              onClick={() => send("SELL", { item: "wheat", qty: 1 })}
-              disabled={isActing || (inventory.wheat || 0) < 1}
+              className="market-btn sluice-btn"
+              onClick={() => send("TOGGLE_SLUICE")}
+              disabled={isActing}
+              style={{ background: farmState?.flags?.sluiceOpen ? "#0ea5e9" : "#334155", color: "#fff" }}
+              title="Open/close canal sluice gate to flood furrows"
             >
-              Sell 1 Wheat (+{sellPrice}g)
+              🌊 {farmState?.flags?.sluiceOpen ? "Sluice Open ✓" : "Open Sluice Gate"}
             </button>
             <button
               className="market-btn pick-flowers-btn"
@@ -236,9 +244,7 @@ export function FarmPanel({ farmState, onFarmAction, isActing }) {
             </button>
           </div>
           <div className="price-hint">
-            Current wheat price: <strong>×{wheatMult.toFixed(2)}</strong>
-            {wheatMult > 1 && <span className="price-up"> ▲ Raghu is paying above market</span>}
-            {wheatMult < 1 && <span className="price-down"> ▼ Raghu has docked the price</span>}
+            Current wheat price: <strong>×{wheatMult.toFixed(2)}</strong> | Sluice: <strong>{farmState?.flags?.sluiceOpen ? "Flooding" : "Closed"}</strong>
           </div>
         </div>
       </div>

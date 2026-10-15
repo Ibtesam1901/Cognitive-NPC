@@ -4,7 +4,7 @@
  * Restores and synchronizes game state from localStorage with fail-safes.
  */
 
-const STORAGE_KEY = "bhima_hollow_game_save_v2";
+const STORAGE_KEY = "bhima_hollow_game_save_v3";
 
 export const INITIAL_GAME_STATE = {
   day: 1,
@@ -97,10 +97,19 @@ export function loadGameState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_GAME_STATE;
     const parsed = JSON.parse(raw);
+    
+    // Ensure all 6 plots are present
+    const mergedPlots = INITIAL_GAME_STATE.plots.map((initP) => {
+      const savedP = (parsed.plots || []).find((p) => p.id === initP.id);
+      return savedP ? { ...initP, ...savedP } : initP;
+    });
+
     return {
       ...INITIAL_GAME_STATE,
       ...parsed,
+      plots: mergedPlots,
       inventory: { ...INITIAL_GAME_STATE.inventory, ...(parsed.inventory || {}) },
+      prices: { ...INITIAL_GAME_STATE.prices, ...(parsed.prices || {}) },
       npc: { ...INITIAL_GAME_STATE.npc, ...(parsed.npc || {}) },
       flags: { ...INITIAL_GAME_STATE.flags, ...(parsed.flags || {}) },
       memory: { ...INITIAL_GAME_STATE.memory, ...(parsed.memory || {}) },
