@@ -250,3 +250,40 @@ test("selling wheat respects the price multiplier", () => {
   assert.equal(s.gold, 100 + Math.round(4 * 10 * 1.3));
   assert.equal(ev(s, "SELL", { item: "wheat", qty: 1 }).ok, false);
 });
+
+test("market buying and selling multi-crop expansion works", () => {
+  const s = createInitialState();
+  // Buying rice seeds from merchant
+  const buyRes = ev(s, "BUY", { item: "rice_seeds", qty: 2 });
+  assert.equal(buyRes.ok, true);
+  assert.equal(s.gold, 100 - 20); // 10g each
+  assert.equal(s.inventory.rice_seeds, 4);
+
+  // Attempting to buy with insufficient gold is rejected
+  s.gold = 5;
+  assert.equal(ev(s, "BUY", { item: "water_can", qty: 1 }).ok, false);
+
+  // Harvesting and selling sugarcane
+  s.inventory.sugarcane = 3;
+  s.prices.sugarcane = 1.2;
+  const sellRes = ev(s, "SELL", { item: "sugarcane", qty: 2 });
+  assert.equal(sellRes.ok, true);
+  assert.equal(s.inventory.sugarcane, 1);
+  assert.equal(s.gold, 5 + Math.round(2 * 24 * 1.2)); // 24g base * 1.2 mult
+});
+
+test("canal sluice gate hydrates planted plots", () => {
+  const s = createInitialState();
+  ev(s, "PLANT", { plotId: 1, crop: "wheat" });
+  assert.equal(s.plots[0].watered, false);
+  const openRes = ev(s, "TOGGLE_SLUICE");
+  assert.equal(openRes.ok, true);
+  assert.equal(s.flags.sluiceOpen, true);
+  assert.equal(s.plots[0].watered, true);
+
+  // Toggle close
+  const closeRes = ev(s, "TOGGLE_SLUICE");
+  assert.equal(closeRes.ok, true);
+  assert.equal(s.flags.sluiceOpen, false);
+});
+

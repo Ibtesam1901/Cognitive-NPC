@@ -5865,6 +5865,322 @@
   }
 }
 
+/* ── MarketModal: Village Trading Post ── */
+.market-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.market-modal-card {
+  width: 100%;
+  max-width: 780px;
+  max-height: 88vh;
+  background: var(--panel-bg, #ffffff);
+  border: 1px solid var(--panel-border, rgba(0, 0, 0, 0.08));
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] .market-modal-card {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.market-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--panel-border, rgba(0, 0, 0, 0.08));
+  background: var(--header-bg, rgba(248, 250, 252, 0.8));
+}
+
+[data-theme="dark"] .market-header {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.market-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.market-title-group h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary, #0f172a);
+}
+
+[data-theme="dark"] .market-title-group h3 {
+  color: #f8fafc;
+}
+
+.market-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+  margin: 0;
+}
+
+.market-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.market-gold-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #d97706;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+[data-theme="dark"] .market-gold-pill {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+
+.market-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+
+.market-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-primary);
+}
+
+.market-grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+@media (max-width: 700px) {
+  .market-grid-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.market-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+  border-bottom: 1px solid var(--panel-border, rgba(0, 0, 0, 0.06));
+  padding-bottom: 6px;
+}
+
+.section-title-row h4 {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.market-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.market-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--card-bg, rgba(241, 245, 249, 0.6));
+  border: 1px solid var(--panel-border, rgba(0, 0, 0, 0.06));
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .market-item-row {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.market-item-row:hover {
+  border-color: rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.item-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.item-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.item-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+[data-theme="dark"] .item-name {
+  color: #f1f5f9;
+}
+
+.item-price-tag {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.item-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted, #94a3b8);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.item-owned {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+}
+
+.price-trend-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trend-up {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.trend-down {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.trend-neutral {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.unit-gold {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.market-buy-btn {
+  background: #10b981;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.market-buy-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: scale(1.02);
+}
+
+.market-buy-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.market-sell-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.market-sell-btn, .market-sell-all-btn {
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.market-sell-all-btn {
+  background: #d97706;
+}
+
+.market-sell-btn:hover:not(:disabled), .market-sell-all-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.market-sell-btn:disabled, .market-sell-all-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+
 
 
 

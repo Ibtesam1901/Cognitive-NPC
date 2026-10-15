@@ -27,14 +27,18 @@ export const VILLAGE_OBSTACLES = [
   // Raghu Character Collision (at [0.2, 0, 1.6])
   { id: "raghu_npc", type: "cylinder", x: 0.2, z: 1.6, radius: 0.65 },
 
-  // North Border Wall & Dense Forest Trees
-  { id: "north_boundary", type: "box", minX: -12, maxX: 12, minZ: -11, maxZ: -9.2 },
-  // South Boundary
-  { id: "south_boundary", type: "box", minX: -12, maxX: 12, minZ: 8.5, maxZ: 11 },
-  // West Boundary
-  { id: "west_boundary", type: "box", minX: -11, maxX: -9.0, minZ: -10, maxZ: 10 },
-  // East Boundary
-  { id: "east_boundary", type: "box", minX: 8.8, maxX: 11, minZ: -10, maxZ: 10 },
+  // Village Market & Trading Post (situated on East road [9.5, 0, 0.5])
+  { id: "market_stall_main", type: "box", minX: 8.0, maxX: 11.2, minZ: -1.2, maxZ: 2.2 },
+  { id: "market_stall_grain", type: "box", minX: 8.5, maxX: 10.8, minZ: 2.8, maxZ: 5.2 },
+
+  // Expanded North Border Wall & Dense Forest Trees
+  { id: "north_boundary", type: "box", minX: -18, maxX: 18, minZ: -16.5, maxZ: -14.8 },
+  // Expanded South Boundary
+  { id: "south_boundary", type: "box", minX: -18, maxX: 18, minZ: 14.8, maxZ: 17 },
+  // Expanded West Boundary
+  { id: "west_boundary", type: "box", minX: -16.8, maxX: -14.8, minZ: -16, maxZ: 16 },
+  // Expanded East Boundary
+  { id: "east_boundary", type: "box", minX: 14.8, maxX: 16.8, minZ: -16, maxZ: 16 },
 
   // Key Trees around perimeter
   { id: "tree_east_1", type: "cylinder", x: 6.8, z: -4.5, radius: 0.7 },

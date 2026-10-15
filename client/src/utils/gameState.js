@@ -13,16 +13,30 @@ export const INITIAL_GAME_STATE = {
   gold: 100,
   inventory: {
     seeds: 3,
+    rice_seeds: 2,
+    cane_cuttings: 1,
+    marigold_seeds: 2,
     wheat: 0,
+    rice: 0,
+    sugarcane: 0,
+    marigold: 0,
     water_can: 1,
     fertilizer: 1,
     flowers: 0,
+  },
+  prices: {
+    wheat: 1.0,
+    rice: 1.0,
+    sugarcane: 1.0,
+    marigold: 1.0,
   },
   plots: [
     { id: 1, locked: false, crop: null, growth: 0, watered: false },
     { id: 2, locked: true, crop: null, growth: 0, watered: false },
     { id: 3, locked: true, crop: null, growth: 0, watered: false },
     { id: 4, locked: true, crop: null, growth: 0, watered: false },
+    { id: 5, locked: true, crop: null, growth: 0, watered: false },
+    { id: 6, locked: true, crop: null, growth: 0, watered: false },
   ],
   quests: [
     {

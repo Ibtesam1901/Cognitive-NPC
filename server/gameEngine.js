@@ -13,6 +13,39 @@ export const EMOTIONS = ["happy", "neutral", "annoyed", "worried", "proud"];
 export const GROWTH_DAYS = 2; // watered days needed before a crop is ready
 export const BASE_PRICE = 10; // gold per wheat before the price multiplier
 
+// Base sell values per crop unit
+export const CROP_BASE_PRICES = {
+  wheat: 10,
+  rice: 16,
+  sugarcane: 24,
+  marigold: 12,
+};
+
+// Market caravan seed / supply purchase prices
+export const MARKET_BUY_PRICES = {
+  seeds: 6, // wheat seeds
+  rice_seeds: 10,
+  cane_cuttings: 15,
+  marigold_seeds: 8,
+  fertilizer: 20,
+  water_can: 35,
+};
+
+// Seed to crop mapping
+export const SEED_TO_CROP = {
+  seeds: "wheat",
+  rice_seeds: "rice",
+  cane_cuttings: "sugarcane",
+  marigold_seeds: "marigold",
+};
+
+export const CROP_TO_SEED = {
+  wheat: "seeds",
+  rice: "rice_seeds",
+  sugarcane: "cane_cuttings",
+  marigold: "marigold_seeds",
+};
+
 export const LIMITS = {
   maxActionsPerTurn: 3,
   maxActiveQuests: 2,
@@ -24,11 +57,11 @@ export const LIMITS = {
   recentTurns: 8,
   summaryEvery: 8,
   replyChars: 400,
-  itemCap: 20,
+  itemCap: 50,
 };
 
-const GIVABLE_ITEMS = ["seeds", "water_can", "fertilizer"];
-const CROPS = ["wheat"];
+const GIVABLE_ITEMS = ["seeds", "rice_seeds", "cane_cuttings", "marigold_seeds", "water_can", "fertilizer"];
+const CROPS = ["wheat", "rice", "sugarcane", "marigold"];
 const WEATHERS = ["clear", "rain"];
 
 class RuleError extends Error {}
@@ -50,20 +83,41 @@ export function createInitialState() {
     time: 8, // hour of day, 0-23
     weather: "clear",
     gold: 100,
-    plots: [1, 2, 3].map((id) => ({
+    plots: [1, 2, 3, 4, 5, 6].map((id) => ({
       id,
-      locked: id !== 1,
+      locked: id !== 1, // plot 1 unlocked, 2-6 locked initially
       crop: null,
       growth: 0,
       watered: false,
       wateredAt: null, // hour of manual watering; null if rain or unwatered
     })),
-    inventory: { seeds: 3, water_can: 1, fertilizer: 0, flowers: 0, wheat: 0 },
-    prices: { wheat: 1.0 },
+    inventory: {
+      seeds: 3,
+      rice_seeds: 2,
+      cane_cuttings: 1,
+      marigold_seeds: 2,
+      water_can: 1,
+      fertilizer: 1,
+      flowers: 0,
+      wheat: 0,
+      rice: 0,
+      sugarcane: 0,
+      marigold: 0,
+    },
+    prices: {
+      wheat: 1.0,
+      rice: 1.0,
+      sugarcane: 1.0,
+      marigold: 1.0,
+    },
     flags: {
       harvestedWheat: false,
+      harvestedRice: false,
+      harvestedSugarcane: false,
+      harvestedMarigold: false,
       shrineOffered: false,
       canChangeWeather: false,
+      sluiceOpen: false,
       giftsToday: 0,
       trustGainedToday: 0,
       weatherChangesToday: 0,
@@ -305,11 +359,15 @@ const playerEvents = {
     const plot = getPlot(state, e.plotId);
     if (plot.locked) fail("that plot is locked");
     if (plot.crop) fail("something is already planted there");
-    if (!CROPS.includes(e.crop)) fail("unknown crop");
-    if (state.inventory.seeds < 1) fail("no seeds left");
-    state.inventory.seeds -= 1;
-    Object.assign(plot, { crop: e.crop, growth: 0, watered: false, wateredAt: null });
-    return `Planted ${e.crop} in plot ${plot.id}`;
+    const cropType = e.crop ?? "wheat";
+    if (!CROPS.includes(cropType)) fail("unknown crop");
+    
+    // Determine which seed is needed
+    const seedItem = CROP_TO_SEED[cropType] ?? "seeds";
+    if ((state.inventory[seedItem] ?? 0) < 1) fail(`no ${seedItem.replace("_", " ")} left`);
+    state.inventory[seedItem] -= 1;
+    Object.assign(plot, { crop: cropType, growth: 0, watered: false, wateredAt: null });
+    return `Planted ${cropType} in plot ${plot.id}`;
   },
 
   WATER(state, e) {
@@ -326,21 +384,61 @@ const playerEvents = {
     const plot = getPlot(state, e.plotId);
     if (!plot.crop) fail("nothing to harvest");
     if (plot.growth < GROWTH_DAYS) fail("crop is not ready yet");
-    addItem(state, "wheat", 2);
+    const crop = plot.crop;
+    const yieldQty = crop === "sugarcane" ? 3 : 2;
+    addItem(state, crop, yieldQty);
     Object.assign(plot, { crop: null, growth: 0, watered: false, wateredAt: null });
-    state.flags.harvestedWheat = true;
-    return `Harvested plot ${plot.id}: +2 wheat`;
+    
+    if (crop === "wheat") state.flags.harvestedWheat = true;
+    if (crop === "rice") state.flags.harvestedRice = true;
+    if (crop === "sugarcane") state.flags.harvestedSugarcane = true;
+    if (crop === "marigold") state.flags.harvestedMarigold = true;
+
+    return `Harvested plot ${plot.id}: +${yieldQty} ${crop}`;
   },
 
   SELL(state, e) {
     const item = e.item ?? "wheat";
     const qty = clamp(toInt(e.qty, 1), 1, LIMITS.itemCap);
-    if (item !== "wheat") fail("Raghu only buys wheat");
-    if (state.inventory.wheat < qty) fail("not enough wheat");
-    const gold = Math.round(qty * BASE_PRICE * state.prices.wheat);
-    state.inventory.wheat -= qty;
+    if (!CROPS.includes(item)) fail(`Raghu and merchant only buy farm crops (${CROPS.join(", ")})`);
+    if ((state.inventory[item] ?? 0) < qty) fail(`not enough ${item}`);
+    
+    const baseVal = CROP_BASE_PRICES[item] ?? BASE_PRICE;
+    const mult = state.prices[item] ?? 1.0;
+    const gold = Math.round(qty * baseVal * mult);
+    state.inventory[item] -= qty;
     state.gold += gold;
-    return `Sold ${qty} wheat for ${gold} gold`;
+    return `Sold ${qty} ${item} for ${gold} gold`;
+  },
+
+  BUY(state, e) {
+    const item = e.item;
+    if (!item || !MARKET_BUY_PRICES[item]) fail("merchant does not sell this item");
+    const qty = clamp(toInt(e.qty, 1), 1, 20);
+    const unitPrice = MARKET_BUY_PRICES[item];
+    const totalCost = unitPrice * qty;
+    if (state.gold < totalCost) fail(`not enough gold (need ${totalCost} gold, have ${state.gold})`);
+    
+    state.gold -= totalCost;
+    addItem(state, item, qty);
+    return `Purchased ${qty} ${item.replace("_", " ")} from merchant for ${totalCost} gold`;
+  },
+
+  TOGGLE_SLUICE(state) {
+    state.flags.sluiceOpen = !state.flags.sluiceOpen;
+    if (state.flags.sluiceOpen) {
+      // Floods and hydrates all planted plots along the canal
+      let hydratedCount = 0;
+      for (const p of state.plots) {
+        if (p.crop && !p.watered) {
+          p.watered = true;
+          p.wateredAt = state.time;
+          hydratedCount++;
+        }
+      }
+      return `Canal Sluice Gate opened! River water surges through the furrows (${hydratedCount} plots hydrated).`;
+    }
+    return "Canal Sluice Gate closed. River water redirected back to the main spring.";
   },
 
   PICK_FLOWERS(state) {
@@ -374,11 +472,20 @@ const playerEvents = {
     state.time = 6;
     state.weather = WEATHERS.includes(e?.weather) ? e.weather : Math.random() < 0.25 ? "rain" : "clear";
     if (state.weather === "rain") for (const p of state.plots) if (p.crop) p.watered = true;
+    
+    // Daily dynamic market price fluctuations (+-20%)
+    for (const crop of CROPS) {
+      const variance = (Math.random() * 0.4 - 0.2); // -0.2 to +0.2
+      const baseMult = state.prices?.[crop] ?? 1.0;
+      state.prices[crop] = Math.round(clamp(baseMult + variance, 0.7, 1.4) * 100) / 100;
+    }
+
     Object.assign(state.flags, {
       giftsToday: 0,
       trustGainedToday: 0,
       weatherChangesToday: 0,
       flowersToday: 0,
+      sluiceOpen: false, // sluice resets at dawn
     });
     return `Day ${state.day} begins (${state.weather})`;
   },

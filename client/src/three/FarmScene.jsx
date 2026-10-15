@@ -15,6 +15,7 @@ import { WebGLBoundary } from "./WebGLBoundary.jsx";
 import { ThreeLoadingScreen } from "./ThreeLoadingScreen.jsx";
 import { PlayerController } from "./PlayerController.jsx";
 import { Collectibles } from "./Collectibles.jsx";
+import { VillageMarketStall } from "./VillageMarketStall.jsx";
 import { usePrefersReducedMotion } from "../utils/motion.js";
 
 /**
@@ -57,6 +58,9 @@ export default function FarmScene({
   onFootstep,
   onPlotClick,
   onCollectItem,
+  onOpenMarket,
+  onSluiceClick,
+  isSluiceOpen = false,
   joystickInput = null,
 }) {
   const reducedMotion = usePrefersReducedMotion();
@@ -204,8 +208,17 @@ export default function FarmScene({
               plots={plots}
               weather={weather}
               isPumpRunning={isPumpRunning}
+              isSluiceOpen={isSluiceOpen}
               reducedMotion={reducedMotion}
               onPlotClick={onPlotClick}
+              onSluiceClick={onSluiceClick}
+            />
+
+            {/* Village Market & Trading Caravan (on East Road) */}
+            <VillageMarketStall
+              position={[9.5, 0, 0.5]}
+              onOpenMarket={onOpenMarket}
+              isNearMarket={Math.hypot(playerCoords.x - 9.5, playerCoords.z - 0.5) < 3.2}
             />
 
             {/* Ancient Banyan: Sprouts lush green foliage with player trust */}
@@ -294,6 +307,18 @@ export default function FarmScene({
           <div className="player-talk-prompt">
             <span className="talk-key-badge">E</span>
             <span className="talk-text">Talk with Raghu</span>
+          </div>
+        )}
+
+        {/* ── Contextual "Open Market" Prompt when walking near Salim's stall ── */}
+        {Math.hypot(playerCoords.x - 9.5, playerCoords.z - 0.5) < 3.0 && (
+          <div
+            className="player-talk-prompt market-prompt"
+            style={{ left: "auto", right: "24px", bottom: "80px", cursor: "pointer" }}
+            onClick={onOpenMarket}
+          >
+            <span className="talk-key-badge" style={{ background: "#ea580c" }}>M</span>
+            <span className="talk-text">Open Village Market</span>
           </div>
         )}
 

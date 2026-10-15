@@ -182,9 +182,9 @@ export function PlayerController({
       velocity.current.z = 0;
     }
 
-    // Keep within world boundary bounds [-10, 10]
-    pos.current.x = Math.max(-9.5, Math.min(9.5, pos.current.x));
-    pos.current.z = Math.max(-9.5, Math.min(9.5, pos.current.z));
+    // Keep within world boundary bounds [-15, 15] for expanded village
+    pos.current.x = Math.max(-14.5, Math.min(14.5, pos.current.x));
+    pos.current.z = Math.max(-14.5, Math.min(14.5, pos.current.z));
 
     // Update Player Mesh Position
     if (playerRef.current) {

@@ -24,6 +24,7 @@ import {
   Maximize2,
   Minimize2,
   ArrowRight,
+  Store,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { sound } from "./utils/sound.js";
@@ -34,6 +35,7 @@ import { JournalPanel } from "./components/JournalPanel.jsx";
 import { StoryModal } from "./components/StoryModal.jsx";
 import { QuestTrackerHUD } from "./components/QuestTrackerHUD.jsx";
 import { TouchJoystick } from "./components/TouchJoystick.jsx";
+import { MarketModal } from "./components/MarketModal.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import { audioManager } from "./utils/audioManager.js";
 import "./App.css";
@@ -102,6 +104,7 @@ export default function App() {
   // Mobile Touch Controls
   const [joystickInput, setJoystickInput] = useState(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [showMarket, setShowMarket] = useState(false);
 
   useEffect(() => {
     const checkTouch = () => {
@@ -110,6 +113,15 @@ export default function App() {
     };
     checkTouch();
     window.addEventListener("touchstart", () => setIsTouchDevice(true), { once: true });
+
+    const handleKeyM = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.code === "KeyM") {
+        setShowMarket((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyM);
+    return () => window.removeEventListener("keydown", handleKeyM);
   }, []);
 
   const showToast = (message, type = "info") => {
@@ -423,6 +435,17 @@ export default function App() {
             </span>
           </div>
 
+          {/* Village Market Shortcut Button */}
+          <button
+            className="game-hud-action-btn btn-open-market"
+            onClick={() => setShowMarket(true)}
+            title="Open Village Market & Trading Caravan (Shortcut: M)"
+            style={{ background: "linear-gradient(135deg, #ea580c 0%, #c2410c 100%)", color: "#fff" }}
+          >
+            <Store size={14} />
+            <span>Market (M)</span>
+          </button>
+
           {/* Next Morning Action */}
           <button
             className="game-hud-action-btn btn-advance-morning"
@@ -610,26 +633,39 @@ export default function App() {
                 }}
                 onPlotClick={(plot) => {
                   if (plot.locked) {
-                    showToast(`Plot #${plot.id} is locked. Speak with Raghu to gain trust & unlock it!`, "info");
+                    showToast(`Plot #${plot.id} is locked. Build trust with Raghu (+4) & complete a quest to unlock!`, "info");
                     return;
                   }
                   if (plot.crop && plot.growth >= 2) {
-                    // Harvest ripe wheat
+                    // Harvest ripe crop
                     handleFarmAction("HARVEST", { plotId: plot.id });
                   } else if (plot.crop && !plot.watered) {
                     // Water parched crop
                     handleFarmAction("WATER", { plotId: plot.id });
                   } else if (!plot.crop) {
-                    // Plant seeds
-                    if ((npcState?.inventory?.seeds ?? 0) <= 0) {
-                      showToast("No seeds left! Speak with Raghu or buy seeds in the Farm panel.", "error");
+                    // Find available seed: seeds -> rice_seeds -> cane_cuttings -> marigold_seeds
+                    const inv = npcState?.inventory || {};
+                    let cropToPlant = null;
+                    if ((inv.seeds || 0) > 0) cropToPlant = "wheat";
+                    else if ((inv.rice_seeds || 0) > 0) cropToPlant = "rice";
+                    else if ((inv.cane_cuttings || 0) > 0) cropToPlant = "sugarcane";
+                    else if ((inv.marigold_seeds || 0) > 0) cropToPlant = "marigold";
+
+                    if (!cropToPlant) {
+                      showToast("No seeds in inventory! Visit Salim's Market (M) to buy seeds.", "error");
                       return;
                     }
-                    handleFarmAction("PLANT", { plotId: plot.id, crop: "wheat" });
+                    handleFarmAction("PLANT", { plotId: plot.id, crop: cropToPlant });
                   } else if (plot.watered) {
-                    showToast(`Plot #${plot.id} is already watered and growing!`, "info");
+                    showToast(`Plot #${plot.id} (${plot.crop}) is well-watered and thriving!`, "info");
                   }
                 }}
+                onOpenMarket={() => setShowMarket(true)}
+                onSluiceClick={() => {
+                  sound.playPop();
+                  handleFarmAction("TOGGLE_SLUICE");
+                }}
+                isSluiceOpen={Boolean(npcState?.flags?.sluiceOpen)}
                 onFootstep={(x, z) => {
                   // Determine surface based on player coordinates
                   // Wood Verandah (around [0.2, 0, 0.5])
@@ -724,6 +760,23 @@ export default function App() {
           onClose={() => setActiveStory(null)}
         />
       )}
+
+      {/* Village Market & Trading Caravan Modal */}
+      <MarketModal
+        isOpen={showMarket}
+        onClose={() => setShowMarket(false)}
+        gold={npcState?.gold ?? 100}
+        inventory={npcState?.inventory || {}}
+        prices={npcState?.prices || {}}
+        onBuy={(item, qty) => {
+          sound.playChime();
+          handleFarmAction("BUY", { item, qty });
+        }}
+        onSell={(item, qty) => {
+          sound.playChime();
+          handleFarmAction("SELL", { item, qty });
+        }}
+      />
 
       {/* Reset Farm Confirmation Modal */}
       {showResetConfirm && (

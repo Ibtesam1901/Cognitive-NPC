@@ -148,35 +148,79 @@ function PlotField({ plot, position, weather, reducedMotion, onPlotClick }) {
         </group>
       )}
 
-      {/* Minecraft-style Wheat Crops */}
+      {/* Distinct 3D Minecraft-style Crops (Wheat, Rice, Sugarcane, Marigold) */}
       {hasCrop && !isLocked && (
         <group ref={wheatGroupRef} position={[0, 0.21, 0]}>
           {stems.map((s) => {
+            const cropType = plot.crop || "wheat";
+
+            // Stage 0: Sprout stage for all crops
             if (growth === 0) {
-              // Stage 0: Tiny voxel green seeds / sprouts
+              const sproutColor = cropType === "marigold" ? "#22c55e" : cropType === "rice" ? "#34d399" : "#4ade80";
               return (
                 <group key={s.key} position={[s.x, 0, s.z]}>
                   <mesh position={[0, 0.05, 0]} castShadow>
                     <boxGeometry args={[0.06, 0.1, 0.06]} />
-                    <meshStandardMaterial color="#4ade80" flatShading />
+                    <meshStandardMaterial color={sproutColor} flatShading />
                   </mesh>
                   <mesh position={[0.03, 0.04, -0.02]}>
                     <boxGeometry args={[0.04, 0.08, 0.04]} />
-                    <meshStandardMaterial color="#22c55e" flatShading />
+                    <meshStandardMaterial color="#16a34a" flatShading />
                   </mesh>
                 </group>
               );
             }
 
+            // Stage 1: Half-grown vegetative stage
             if (growth === 1) {
-              // Stage 1: Half-grown Minecraft green wheat stalks with multi-plane leaves
+              if (cropType === "sugarcane") {
+                // Tall green cane shoots
+                return (
+                  <group key={s.key} position={[s.x, 0, s.z]}>
+                    <mesh position={[0, 0.35, 0]} castShadow>
+                      <boxGeometry args={[0.08, 0.7, 0.08]} />
+                      <meshStandardMaterial color="#84cc16" flatShading />
+                    </mesh>
+                  </group>
+                );
+              }
+              if (cropType === "rice") {
+                // Flooded grass tufts
+                return (
+                  <group key={s.key} position={[s.x, 0, s.z]}>
+                    <mesh position={[0, 0.2, 0]} castShadow>
+                      <boxGeometry args={[0.05, 0.4, 0.05]} />
+                      <meshStandardMaterial color="#10b981" flatShading />
+                    </mesh>
+                    <mesh position={[0, 0.15, 0]} rotation={[0, 0.6, 0]}>
+                      <boxGeometry args={[0.18, 0.1, 0.02]} />
+                      <meshStandardMaterial color="#059669" flatShading />
+                    </mesh>
+                  </group>
+                );
+              }
+              if (cropType === "marigold") {
+                // Bushy green with tiny flower buds
+                return (
+                  <group key={s.key} position={[s.x, 0, s.z]}>
+                    <mesh position={[0, 0.16, 0]} castShadow>
+                      <boxGeometry args={[0.12, 0.32, 0.12]} />
+                      <meshStandardMaterial color="#15803d" flatShading />
+                    </mesh>
+                    <mesh position={[0, 0.34, 0]}>
+                      <boxGeometry args={[0.08, 0.08, 0.08]} />
+                      <meshStandardMaterial color="#f59e0b" flatShading />
+                    </mesh>
+                  </group>
+                );
+              }
+              // Standard wheat stage 1
               return (
                 <group key={s.key} position={[s.x, 0, s.z]}>
                   <mesh position={[0, 0.22, 0]} castShadow>
                     <boxGeometry args={[0.05, 0.44, 0.05]} />
                     <meshStandardMaterial color="#84cc16" flatShading />
                   </mesh>
-                  {/* Angled cross leaves */}
                   <mesh position={[0, 0.35, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
                     <boxGeometry args={[0.22, 0.14, 0.03]} />
                     <meshStandardMaterial color="#65a30d" flatShading />
@@ -189,25 +233,85 @@ function PlotField({ plot, position, weather, reducedMotion, onPlotClick }) {
               );
             }
 
-            // Stage 2+: Fully ripe Minecraft golden wheat (tall stalk + thick golden grain head)
+            // Stage 2+: Fully ripe harvestable crops
+            if (cropType === "sugarcane") {
+              // Tall segmented bamboo-like cane (1.2m tall)
+              return (
+                <group key={s.key} position={[s.x, 0, s.z]}>
+                  <mesh position={[0, 0.6, 0]} castShadow>
+                    <boxGeometry args={[0.10, 1.2, 0.10]} />
+                    <meshStandardMaterial color="#65a30d" roughness={0.7} flatShading />
+                  </mesh>
+                  {/* Cane nodes / joints */}
+                  {[0.3, 0.6, 0.9].map((yJoint, ji) => (
+                    <mesh key={ji} position={[0, yJoint, 0]}>
+                      <boxGeometry args={[0.12, 0.04, 0.12]} />
+                      <meshStandardMaterial color="#a3e635" flatShading />
+                    </mesh>
+                  ))}
+                  {/* Top leaf plume */}
+                  <mesh position={[0, 1.25, 0]} rotation={[0, 0.4, 0]}>
+                    <boxGeometry args={[0.3, 0.16, 0.04]} />
+                    <meshStandardMaterial color="#4ade80" flatShading />
+                  </mesh>
+                </group>
+              );
+            }
+
+            if (cropType === "rice") {
+              // Golden-amber arched rice panicles
+              return (
+                <group key={s.key} position={[s.x, 0, s.z]}>
+                  <mesh position={[0, 0.28, 0]} castShadow>
+                    <boxGeometry args={[0.06, 0.56, 0.06]} />
+                    <meshStandardMaterial color="#10b981" flatShading />
+                  </mesh>
+                  {/* Drooping golden grain head */}
+                  <mesh position={[0.06, 0.52, 0]} rotation={[0, 0, 0.35]} castShadow>
+                    <boxGeometry args={[0.14, 0.26, 0.14]} />
+                    <meshStandardMaterial color="#facc15" roughness={0.5} flatShading />
+                  </mesh>
+                </group>
+              );
+            }
+
+            if (cropType === "marigold") {
+              // Vibrant Orange & Gold blossom crowns (Indian genda phool)
+              return (
+                <group key={s.key} position={[s.x, 0, s.z]}>
+                  <mesh position={[0, 0.22, 0]} castShadow>
+                    <boxGeometry args={[0.08, 0.44, 0.08]} />
+                    <meshStandardMaterial color="#15803d" flatShading />
+                  </mesh>
+                  {/* Orange blossom head */}
+                  <mesh position={[0, 0.48, 0]} castShadow>
+                    <boxGeometry args={[0.22, 0.18, 0.22]} />
+                    <meshStandardMaterial color="#ea580c" roughness={0.5} flatShading />
+                  </mesh>
+                  {/* Yellow blossom center highlight */}
+                  <mesh position={[0, 0.58, 0]}>
+                    <boxGeometry args={[0.12, 0.08, 0.12]} />
+                    <meshStandardMaterial color="#facc15" flatShading />
+                  </mesh>
+                </group>
+              );
+            }
+
+            // Default: Golden Wheat
             return (
               <group key={s.key} position={[s.x, 0, s.z]}>
-                {/* Yellow-brown stalk */}
                 <mesh position={[0, 0.32, 0]} castShadow>
                   <boxGeometry args={[0.06, 0.64, 0.06]} />
                   <meshStandardMaterial color="#d97706" flatShading />
                 </mesh>
-                {/* Thick golden wheat ear block (classic Minecraft wheat head) */}
                 <mesh position={[0, 0.62, 0]} castShadow>
                   <boxGeometry args={[0.18, 0.32, 0.18]} />
                   <meshStandardMaterial color="#f59e0b" roughness={0.6} flatShading />
                 </mesh>
-                {/* Sunlit golden top whiskers */}
                 <mesh position={[0, 0.82, 0]} castShadow>
                   <boxGeometry args={[0.12, 0.12, 0.12]} />
                   <meshStandardMaterial color="#fde047" flatShading />
                 </mesh>
-                {/* Cross awns */}
                 <mesh position={[0, 0.68, 0]} rotation={[0, 0.5, 0]}>
                   <boxGeometry args={[0.24, 0.04, 0.04]} />
                   <meshStandardMaterial color="#fef08a" />
@@ -234,19 +338,24 @@ export function Terrain({
   plots = [],
   weather = "clear",
   isPumpRunning = false,
+  isSluiceOpen = false,
   reducedMotion = false,
   onPlotClick,
+  onSluiceClick,
 }) {
   const waterRef = useRef();
   const isRaining = weather === "rain";
   const isDrought = weather === "drought";
 
-  // Match plots or fallback to default 3
+  // Match plots or fallback to default 6
   const plotList = useMemo(() => {
     const list = [
       { id: 1, locked: false, crop: null, growth: 0, watered: false },
       { id: 2, locked: true, crop: null, growth: 0, watered: false },
       { id: 3, locked: true, crop: null, growth: 0, watered: false },
+      { id: 4, locked: true, crop: null, growth: 0, watered: false },
+      { id: 5, locked: true, crop: null, growth: 0, watered: false },
+      { id: 6, locked: true, crop: null, growth: 0, watered: false },
     ];
     plots.forEach((p) => {
       const idx = list.findIndex((item) => item.id === p.id);
@@ -255,11 +364,14 @@ export function Terrain({
     return list;
   }, [plots]);
 
-  // Vast, neatly arranged fields on the left/north-west side
+  // Vast, neatly arranged fields on the left and south-west side
   const plotPositions = [
     [-4.6, 0, -1.8], // Plot 1 (Spacious North-West)
-    [-4.6, 0, 1.0],  // Plot 2 (South-West)
+    [-4.6, 0, 1.0],  // Plot 2 (Mid-West)
     [-1.6, 0, -2.4], // Plot 3 (North-Central)
+    [-4.6, 0, 3.8],  // Plot 4 (South-West)
+    [-1.6, 0, 3.8],  // Plot 5 (South-Central)
+    [-7.6, 0, 1.0],  // Plot 6 (Far-West Paddy)
   ];
 
   // Ground colors
@@ -385,13 +497,64 @@ export function Terrain({
         <mesh ref={waterRef} position={[0, -0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[1.15, 10.8]} />
           <meshStandardMaterial
-            color={isRaining || isPumpRunning ? "#0284c7" : "#0369a1"}
+            color={isRaining || isPumpRunning || isSluiceOpen ? "#0284c7" : "#0369a1"}
             transparent
             opacity={0.85}
             roughness={0.15}
             metalness={0.4}
           />
         </mesh>
+
+        {/* ── Interactive Canal Sluice Gate ── */}
+        <group
+          position={[0, 0.25, 0.5]}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onSluiceClick) onSluiceClick();
+          }}
+          cursor="pointer"
+        >
+          {/* Wooden Arch Frame */}
+          <mesh position={[-0.55, 0.6, 0]} castShadow>
+            <boxGeometry args={[0.16, 1.3, 0.16]} />
+            <meshStandardMaterial color="#451a03" roughness={0.9} flatShading />
+          </mesh>
+          <mesh position={[0.55, 0.6, 0]} castShadow>
+            <boxGeometry args={[0.16, 1.3, 0.16]} />
+            <meshStandardMaterial color="#451a03" roughness={0.9} flatShading />
+          </mesh>
+          <mesh position={[0, 1.25, 0]} castShadow>
+            <boxGeometry args={[1.26, 0.16, 0.16]} />
+            <meshStandardMaterial color="#451a03" roughness={0.9} flatShading />
+          </mesh>
+
+          {/* Sluice Gate Oak Slab (slides up when open) */}
+          <mesh
+            position={[0, isSluiceOpen ? 0.85 : 0.25, 0]}
+            castShadow
+          >
+            <boxGeometry args={[0.94, 0.7, 0.08]} />
+            <meshStandardMaterial color={isSluiceOpen ? "#854d0e" : "#57381e"} roughness={0.8} flatShading />
+          </mesh>
+
+          {/* Cast Iron Turning Wheel on Top */}
+          <group position={[0, 1.35, 0]}>
+            <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <torusGeometry args={[0.18, 0.03, 8, 12]} />
+              <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.2} />
+            </mesh>
+            <mesh position={[0, -0.08, 0]}>
+              <cylinderGeometry args={[0.025, 0.025, 0.16, 8]} />
+              <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
+            </mesh>
+          </group>
+
+          {/* Interactive floating label */}
+          <mesh position={[0, 1.7, 0]}>
+            <boxGeometry args={[0.6, 0.12, 0.02]} />
+            <meshStandardMaterial color={isSluiceOpen ? "#10b981" : "#f59e0b"} />
+          </mesh>
+        </group>
       </group>
 
       {/* Minecraft-style Stone Well */}

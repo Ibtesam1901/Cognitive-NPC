@@ -320,6 +320,27 @@ export function SkyAndAtmosphere({
           />
         </points>
       )}
+
+      {/* Night Fireflies Dancing over Crops & Village Fields */}
+      {isNight && (
+        <group position={[0, 0, 0]}>
+          {[
+            [-4.5, 1.2, -1.5],
+            [-4.0, 0.8, 1.2],
+            [-2.0, 1.4, -2.0],
+            [-4.5, 0.9, 3.5],
+            [-1.5, 1.1, 3.5],
+            [-6.5, 1.5, -4.5],
+            [1.0, 0.7, 2.5],
+            [9.0, 1.2, 0.5],
+          ].map((fp, fi) => (
+            <mesh key={fi} position={fp}>
+              <sphereGeometry args={[0.04, 6, 6]} />
+              <meshBasicMaterial color="#a3e635" />
+            </mesh>
+          ))}
+        </group>
+      )}
     </>
   );
 }
