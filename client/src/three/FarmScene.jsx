@@ -10,6 +10,7 @@ import { BarnAndLakshmi } from "./BarnAndLakshmi.jsx";
 import { HutAndProps } from "./HutAndProps.jsx";
 import { SkyAndAtmosphere } from "./SkyAndAtmosphere.jsx";
 import { Hotspots } from "./Hotspots.jsx";
+import { VoxelTree } from "./VoxelTree.jsx";
 import { WebGLBoundary } from "./WebGLBoundary.jsx";
 import { ThreeLoadingScreen } from "./ThreeLoadingScreen.jsx";
 import { usePrefersReducedMotion } from "../utils/motion.js";
@@ -158,7 +159,7 @@ export default function FarmScene({
             shadows={quality !== "low"}
             dpr={dpr}
             frameloop={isTabVisible ? "always" : "never"}
-            camera={{ position: [0, 2.1, 5.8], fov: 46 }}
+            camera={{ position: [0, 3.8, 9.2], fov: 48 }}
             gl={{
               antialias: quality !== "low",
               powerPreference: "high-performance",
@@ -186,21 +187,45 @@ export default function FarmScene({
             />
 
             {/* Ancient Banyan: Sprouts lush green foliage with player trust */}
-            <DeadBanyanTree trust={trust} />
+            <DeadBanyanTree position={[-6.2, 0, -7.0]} trust={trust} />
 
-            {/* Antique Irrigation Diesel Pump */}
+            {/* Minecraft Forest & Fruit Orchard Groves */}
+            {/* North Forest Ridge (Oak, Birch, Spruce) */}
+            <VoxelTree position={[-8.5, 0.4, -9.0]} scale={1.2} type="spruce" />
+            <VoxelTree position={[-6.0, 0.4, -9.5]} scale={1.1} type="oak" />
+            <VoxelTree position={[-3.5, 0, -8.2]} scale={1.0} type="birch" />
+            <VoxelTree position={[0.5, 0, -8.5]} scale={1.15} type="oak" />
+            <VoxelTree position={[3.5, 0, -8.0]} scale={1.25} type="spruce" />
+            <VoxelTree position={[6.0, 0.35, -8.5]} scale={1.2} type="oak" />
+            <VoxelTree position={[8.5, 0.35, -9.0]} scale={1.3} type="spruce" />
+
+            {/* East Border Orchard (Fruit / Apple Trees behind Barn) */}
+            <VoxelTree position={[6.8, 0, -4.5]} scale={1.05} type="fruit" />
+            <VoxelTree position={[7.5, 0, -1.8]} scale={1.1} type="oak" />
+            <VoxelTree position={[7.2, 0, 1.5]} scale={1.0} type="fruit" />
+            <VoxelTree position={[6.5, 0, 4.2]} scale={1.05} type="birch" />
+
+            {/* West Field Windbreak Trees (Sheltering the crops) */}
+            <VoxelTree position={[-8.2, 0, -4.5]} scale={1.1} type="birch" />
+            <VoxelTree position={[-8.0, 0, -1.0]} scale={1.2} type="spruce" />
+            <VoxelTree position={[-7.8, 0, 2.5]} scale={1.05} type="oak" />
+            <VoxelTree position={[-6.8, 0, 5.0]} scale={1.0} type="fruit" />
+
+            {/* Antique Irrigation Diesel Pump - positioned by canal culvert */}
             <IrrigationPump
+              position={[2.4, 0.25, -2.4]}
               isRepaired={isPumpRunning}
               reducedMotion={reducedMotion}
             />
 
-            {/* Barn & Lakshmi the Cow */}
+            {/* Cattle Barn & Lakshmi the Cow - positioned neatly in the East paddock */}
             <BarnAndLakshmi
+              position={[5.2, 0, 0.2]}
               isCowFound={isCowFound}
               reducedMotion={reducedMotion}
             />
 
-            {/* Low-Poly Animated Raghu Character */}
+            {/* Low-Poly Animated Raghu Character - stood warmly at front of house steps */}
             <RaghuModel
               trust={trust}
               mood={mood}
@@ -223,13 +248,14 @@ export default function FarmScene({
             {/* Cinematic Camera Orbit with Strict Bounds */}
             <OrbitControls
               enablePan={false}
+              target={[-0.5, 0.8, 0]}
               minDistance={4.5}
-              maxDistance={14.0}
+              maxDistance={18.0}
               minPolarAngle={Math.PI / 6}
               maxPolarAngle={Math.PI / 2 - 0.08}
               dampingFactor={0.05}
               autoRotate={!reducedMotion && !isSpeaking}
-              autoRotateSpeed={0.25}
+              autoRotateSpeed={0.2}
             />
           </Canvas>
         </Suspense>

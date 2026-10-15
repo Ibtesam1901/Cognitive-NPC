@@ -2,24 +2,73 @@ import React, { useMemo } from "react";
 import * as THREE from "three";
 
 /**
- * Farmhouse Hut, Verandah, Charpai (Rope Cot), and Inventory Props Table:
- * - Shows Heirloom Seed Bag on table if player has "seeds" in inventory
- * - Shows Rolled Antique Map Scroll on table if player has "old_map" in inventory
+ * Minecraft-style Village Farmhouse & Verandah:
+ * - Built from Minecraft terracotta, oak wood logs, cobblestone base, and stepped hay bale / dark oak slab roof
+ * - Front glass-paned windows and oak door
+ * - Porch with Charpai (woven bed) and wooden side table for inventory items (Seeds, Map)
  */
 export function HutAndProps({
-  position = [0, 0.3, -1.8],
+  position = [0.2, 0.3, -2.0],
   inventory = [],
 }) {
   const materials = useMemo(() => {
     return {
-      mudWall: new THREE.MeshStandardMaterial({ color: "#9a5b32", roughness: 0.95 }),
-      thatchRoof: new THREE.MeshStandardMaterial({ color: "#a16207", roughness: 0.9 }),
-      wood: new THREE.MeshStandardMaterial({ color: "#54381e", roughness: 0.85 }),
-      door: new THREE.MeshStandardMaterial({ color: "#3e2815", roughness: 0.9 }),
-      charpaiRope: new THREE.MeshStandardMaterial({ color: "#d97706", roughness: 0.8 }),
-      seedSack: new THREE.MeshStandardMaterial({ color: "#d4d4d8", roughness: 0.9 }),
-      seedGrain: new THREE.MeshStandardMaterial({ color: "#ca8a04", roughness: 0.7 }),
-      parchment: new THREE.MeshStandardMaterial({ color: "#fef08a", roughness: 0.7 }),
+      terracotta: new THREE.MeshStandardMaterial({
+        color: "#b45309", // warm brown terracotta
+        roughness: 0.9,
+        flatShading: true,
+      }),
+      cobbleBase: new THREE.MeshStandardMaterial({
+        color: "#64748b", // cobblestone foundation
+        roughness: 0.95,
+        flatShading: true,
+      }),
+      woodLog: new THREE.MeshStandardMaterial({
+        color: "#452817", // oak log pillars
+        roughness: 0.85,
+        flatShading: true,
+      }),
+      woodPlank: new THREE.MeshStandardMaterial({
+        color: "#78350f", // oak wood planks
+        roughness: 0.85,
+        flatShading: true,
+      }),
+      roofHay: new THREE.MeshStandardMaterial({
+        color: "#ca8a04", // thatch / hay bale golden roof
+        roughness: 0.9,
+        flatShading: true,
+      }),
+      door: new THREE.MeshStandardMaterial({
+        color: "#3e2815",
+        roughness: 0.9,
+        flatShading: true,
+      }),
+      glass: new THREE.MeshStandardMaterial({
+        color: "#bae6fd",
+        transparent: true,
+        opacity: 0.65,
+        roughness: 0.2,
+      }),
+      charpaiRope: new THREE.MeshStandardMaterial({
+        color: "#d97706",
+        roughness: 0.85,
+        flatShading: true,
+      }),
+      seedSack: new THREE.MeshStandardMaterial({
+        color: "#cbd5e1",
+        roughness: 0.9,
+        flatShading: true,
+      }),
+      seedGrain: new THREE.MeshStandardMaterial({
+        color: "#f59e0b",
+        roughness: 0.6,
+        flatShading: true,
+      }),
+      parchment: new THREE.MeshStandardMaterial({
+        color: "#fef08a",
+        roughness: 0.7,
+        flatShading: true,
+      }),
       redRibbon: new THREE.MeshBasicMaterial({ color: "#ef4444" }),
     };
   }, []);
@@ -33,102 +82,146 @@ export function HutAndProps({
 
   return (
     <group position={position}>
-      {/* Farmhouse Mud Brick Walls */}
-      <mesh position={[0, 1.4, -0.6]} castShadow receiveShadow material={materials.mudWall}>
-        <boxGeometry args={[4.2, 2.5, 2.2]} />
+      {/* ── Minecraft Cobblestone Foundation (Base perimeter) ── */}
+      <mesh position={[0, 0.25, -0.6]} castShadow receiveShadow material={materials.cobbleBase}>
+        <boxGeometry args={[4.4, 0.5, 2.6]} />
       </mesh>
 
-      {/* Overhanging Thatched Straw Roof */}
-      <mesh position={[0, 2.85, -0.4]} rotation={[0, 0, 0]} castShadow material={materials.thatchRoof}>
-        <coneGeometry args={[3.2, 1.2, 4]} />
+      {/* ── Terracotta Mud Brick Walls (Minecraft blocky building) ── */}
+      <mesh position={[0, 1.6, -0.6]} castShadow receiveShadow material={materials.terracotta}>
+        <boxGeometry args={[4.2, 2.2, 2.4]} />
       </mesh>
 
-      {/* Rustic Wooden Front Door */}
-      <mesh position={[0, 1.0, 0.52]} material={materials.door}>
-        <boxGeometry args={[1.0, 1.8, 0.08]} />
+      {/* 4 Oak Wood Corner Log Columns (1x1 block columns on building corners) */}
+      {[-2.05, 2.05].map((x, xi) =>
+        [-1.75, 0.55].map((z, zi) => (
+          <mesh
+            key={`corner-col-${xi}-${zi}`}
+            position={[x, 1.45, z]}
+            castShadow
+            material={materials.woodLog}
+          >
+            <boxGeometry args={[0.32, 2.7, 0.32]} />
+          </mesh>
+        ))
+      )}
+
+      {/* ── Stepped Minecraft Roof (Tiered slabs of thatch/planks) ── */}
+      {/* Tier 1 (Lowest, widest eaves overhang) */}
+      <mesh position={[0, 2.75, -0.6]} castShadow receiveShadow material={materials.roofHay}>
+        <boxGeometry args={[4.8, 0.35, 3.0]} />
+      </mesh>
+      {/* Tier 2 */}
+      <mesh position={[0, 3.1, -0.6]} castShadow receiveShadow material={materials.roofHay}>
+        <boxGeometry args={[3.8, 0.35, 2.3]} />
+      </mesh>
+      {/* Tier 3 (Peak ridge) */}
+      <mesh position={[0, 3.45, -0.6]} castShadow material={materials.roofHay}>
+        <boxGeometry args={[2.8, 0.35, 1.5]} />
       </mesh>
 
-      {/* Small Shuttered Verandah Windows */}
-      <mesh position={[-1.2, 1.3, 0.52]} material={materials.door}>
-        <boxGeometry args={[0.6, 0.6, 0.06]} />
+      {/* ── Front Oak Door ── */}
+      <mesh position={[0, 1.15, 0.62]} castShadow material={materials.door}>
+        <boxGeometry args={[0.9, 1.8, 0.08]} />
       </mesh>
-      <mesh position={[1.2, 1.3, 0.52]} material={materials.door}>
-        <boxGeometry args={[0.6, 0.6, 0.06]} />
-      </mesh>
-
-      {/* Verandah Corner Posts */}
-      <mesh position={[-1.9, 1.1, 1.1]} castShadow material={materials.wood}>
-        <cylinderGeometry args={[0.07, 0.07, 2.2, 6]} />
-      </mesh>
-      <mesh position={[1.9, 1.1, 1.1]} castShadow material={materials.wood}>
-        <cylinderGeometry args={[0.07, 0.07, 2.2, 6]} />
+      {/* Door Handle */}
+      <mesh position={[0.32, 1.15, 0.68]}>
+        <boxGeometry args={[0.06, 0.12, 0.06]} />
+        <meshStandardMaterial color="#ca8a04" metalness={0.7} />
       </mesh>
 
-      {/* Traditional Indian Charpai (Woven Rope Cot) */}
-      <group position={[-1.2, 0, 0.8]} rotation={[0, 0.2, 0]}>
-        {/* 4 Wooden Turned Legs */}
+      {/* ── 2 Symmetrical Front Windows (Minecraft Glass Panes) ── */}
+      {[-1.3, 1.3].map((xWin, wi) => (
+        <group key={`win-${wi}`} position={[xWin, 1.5, 0.62]}>
+          <mesh material={materials.glass}>
+            <boxGeometry args={[0.7, 0.7, 0.06]} />
+          </mesh>
+          {/* Wooden Window Crossbars */}
+          <mesh material={materials.woodLog}>
+            <boxGeometry args={[0.72, 0.06, 0.08]} />
+          </mesh>
+          <mesh material={materials.woodLog}>
+            <boxGeometry args={[0.06, 0.72, 0.08]} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* ── Verandah Front Pillars (Minecraft Fences / Thin Logs) ── */}
+      <mesh position={[-1.9, 1.1, 1.1]} castShadow material={materials.woodLog}>
+        <boxGeometry args={[0.18, 2.2, 0.18]} />
+      </mesh>
+      <mesh position={[1.9, 1.1, 1.1]} castShadow material={materials.woodLog}>
+        <boxGeometry args={[0.18, 2.2, 0.18]} />
+      </mesh>
+      {/* Verandah Overhead Canopy Beam */}
+      <mesh position={[0, 2.15, 1.1]} castShadow material={materials.woodPlank}>
+        <boxGeometry args={[4.0, 0.18, 0.18]} />
+      </mesh>
+
+      {/* ── Traditional Charpai (Minecraft-style blocky wooden bed) ── */}
+      <group position={[-1.2, 0, 0.8]}>
+        {/* 4 Blocky Wooden Legs */}
         {[-0.45, 0.45].map((x, xi) =>
-          [-0.7, 0.7].map((z, zi) => (
-            <mesh key={`charpai-leg-${xi}-${zi}`} position={[x, 0.2, z]} castShadow material={materials.wood}>
-              <cylinderGeometry args={[0.04, 0.035, 0.4, 6]} />
+          [-0.65, 0.65].map((z, zi) => (
+            <mesh key={`charpai-leg-${xi}-${zi}`} position={[x, 0.2, z]} castShadow material={materials.woodLog}>
+              <boxGeometry args={[0.1, 0.4, 0.1]} />
             </mesh>
           ))
         )}
-        {/* Wooden Frame Rails */}
-        <mesh position={[0, 0.38, -0.7]} material={materials.wood}>
-          <boxGeometry args={[0.9, 0.06, 0.06]} />
+        {/* Frame Rails */}
+        <mesh position={[0, 0.38, -0.65]} material={materials.woodPlank}>
+          <boxGeometry args={[0.9, 0.08, 0.1]} />
         </mesh>
-        <mesh position={[0, 0.38, 0.7]} material={materials.wood}>
-          <boxGeometry args={[0.9, 0.06, 0.06]} />
+        <mesh position={[0, 0.38, 0.65]} material={materials.woodPlank}>
+          <boxGeometry args={[0.9, 0.08, 0.1]} />
         </mesh>
-        <mesh position={[-0.45, 0.38, 0]} material={materials.wood}>
-          <boxGeometry args={[0.06, 0.06, 1.4]} />
+        <mesh position={[-0.45, 0.38, 0]} material={materials.woodPlank}>
+          <boxGeometry args={[0.1, 0.08, 1.3]} />
         </mesh>
-        <mesh position={[0.45, 0.38, 0]} material={materials.wood}>
-          <boxGeometry args={[0.06, 0.06, 1.4]} />
+        <mesh position={[0.45, 0.38, 0]} material={materials.woodPlank}>
+          <boxGeometry args={[0.1, 0.08, 1.3]} />
         </mesh>
-        {/* Woven Coir Webbing Surface */}
-        <mesh position={[0, 0.37, 0]} rotation={[-Math.PI / 2, 0, 0]} material={materials.charpaiRope}>
-          <planeGeometry args={[0.82, 1.34]} />
+        {/* Woven Coir Mat Slab */}
+        <mesh position={[0, 0.39, 0]} castShadow material={materials.charpaiRope}>
+          <boxGeometry args={[0.82, 0.06, 1.22]} />
         </mesh>
       </group>
 
-      {/* Rustic Wooden Side Table for Inventory Clues */}
-      <group position={[1.3, 0, 0.9]} rotation={[0, -0.15, 0]}>
-        {/* Table Legs */}
+      {/* ── Side Table for Inventory Items ── */}
+      <group position={[1.2, 0, 0.8]}>
+        {/* 4 Blocky Table Legs */}
         {[-0.3, 0.3].map((x, xi) =>
           [-0.2, 0.2].map((z, zi) => (
-            <mesh key={`tbl-leg-${xi}-${zi}`} position={[x, 0.3, z]} castShadow material={materials.wood}>
-              <cylinderGeometry args={[0.03, 0.03, 0.6, 6]} />
+            <mesh key={`tbl-leg-${xi}-${zi}`} position={[x, 0.3, z]} castShadow material={materials.woodLog}>
+              <boxGeometry args={[0.08, 0.6, 0.08]} />
             </mesh>
           ))
         )}
-        {/* Table Top */}
-        <mesh position={[0, 0.6, 0]} castShadow receiveShadow material={materials.wood}>
-          <boxGeometry args={[0.8, 0.06, 0.6]} />
+        {/* Table Top Slab */}
+        <mesh position={[0, 0.62, 0]} castShadow receiveShadow material={materials.woodPlank}>
+          <boxGeometry args={[0.85, 0.08, 0.65]} />
         </mesh>
 
         {/* Inventory Item: Heirloom Seeds Bag */}
         {hasSeeds && (
-          <group position={[-0.18, 0.72, 0]}>
+          <group position={[-0.2, 0.76, 0]}>
             <mesh castShadow material={materials.seedSack}>
-              <cylinderGeometry args={[0.1, 0.14, 0.22, 7]} />
+              <boxGeometry args={[0.24, 0.22, 0.24]} />
             </mesh>
-            <mesh position={[0, 0.11, 0]} material={materials.seedGrain}>
-              <sphereGeometry args={[0.09, 6, 6]} />
+            <mesh position={[0, 0.12, 0]} material={materials.seedGrain}>
+              <boxGeometry args={[0.18, 0.06, 0.18]} />
             </mesh>
           </group>
         )}
 
         {/* Inventory Item: Rolled Ancient Valley Map */}
         {hasMap && (
-          <group position={[0.16, 0.65, 0]} rotation={[0, 0.4, 0]}>
+          <group position={[0.18, 0.68, 0]} rotation={[0, 0.3, 0]}>
             <mesh castShadow material={materials.parchment}>
-              <cylinderGeometry args={[0.04, 0.04, 0.35, 8]} />
+              <boxGeometry args={[0.1, 0.1, 0.36]} />
             </mesh>
-            {/* Red binding ribbon */}
             <mesh position={[0, 0, 0]} material={materials.redRibbon}>
-              <torusGeometry args={[0.042, 0.008, 4, 8]} />
+              <boxGeometry args={[0.11, 0.11, 0.06]} />
             </mesh>
           </group>
         )}

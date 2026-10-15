@@ -22,7 +22,7 @@ export function Hotspots({
   return (
     <group>
       {/* Hotspot 1: Irrigation Canal & Pump */}
-      <group position={[1.8, 1.4, -2.4]}>
+      <group position={[2.4, 1.4, -2.4]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
             className={`three-hotspot-btn ${dawnWateringActive ? "active" : ""}`}
@@ -40,7 +40,7 @@ export function Hotspots({
       </group>
 
       {/* Hotspot 2: Dead Banyan Tree / Sacred Roots */}
-      <group position={[-5.2, 2.2, -5.5]}>
+      <group position={[-6.2, 2.6, -7.0]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
             className={`three-hotspot-btn ${villagePrayerActive ? "active" : ""}`}
@@ -58,7 +58,7 @@ export function Hotspots({
       </group>
 
       {/* Hotspot 3: Ancient Stone Well */}
-      <group position={[-3.2, 1.8, 2.2]}>
+      <group position={[-3.8, 1.8, 2.8]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
             className="three-hotspot-btn"
@@ -76,7 +76,7 @@ export function Hotspots({
       </group>
 
       {/* Hotspot 4: Farmhouse Verandah & Crop Fields */}
-      <group position={[-2.5, 1.2, -1.8]}>
+      <group position={[-4.6, 1.4, -0.4]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
             className={`three-hotspot-btn ${firstHarvestActive ? "active" : ""}`}
