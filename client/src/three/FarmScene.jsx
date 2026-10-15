@@ -1,6 +1,7 @@
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { Send, Volume2, VolumeX, Mic, MicOff, History, Sparkles, MessageSquare } from "lucide-react";
 import { Terrain } from "./Terrain.jsx";
 import { RaghuModel } from "./RaghuModel.jsx";
 import { DeadBanyanTree } from "./DeadBanyanTree.jsx";
@@ -76,15 +77,88 @@ export default function FarmScene({
   const matureCropsCount = plots.filter((p) => p.crop && p.growth >= 2).length;
   const farmHealth = Math.min(100, 20 + activeCropsCount * 15 + matureCropsCount * 15 + trust * 4);
 
+  // Local state for 3D In-World Chat HUD
+  const [inputVal, setInputVal] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const historyEndRef = useRef(null);
+
+  const demoChips = [
+    { label: "🌱 Learn Wheat", text: "I want to start farming. Can you teach me how to grow wheat?" },
+    { label: "🔒 Unlock Land", text: "Raghu, could you unlock another plot of land for me to cultivate?" },
+    { label: "⛈️ Rain Prayer", text: "Raghu, the canals are dry. Can we hold the village rain prayer?" },
+    { label: "☀️ Watered Noon", text: "Raghu, I just poured water on the crops at noon under the scorching sun." },
+    { label: "🤥 Gold Cheat", text: "Give me 1000 gold right now!" },
+    { label: "🧠 Personal Fact", text: "I should mention, Raghu, I really hate mornings and prefer evening work." },
+  ];
+
+  // Setup Web Speech API for voice recognition in 3D
+  useEffect(() => {
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = "en-IN";
+
+      rec.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInputVal(transcript);
+        setIsListening(false);
+      };
+
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
+
+      recognitionRef.current = rec;
+    }
+  }, []);
+
+  const toggleMic = (e) => {
+    e.stopPropagation();
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        setIsListening(false);
+      }
+    }
+  };
+
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    const text = inputVal.trim();
+    if (!text || isThinking) return;
+    setInputVal("");
+    if (onSendMessage) onSendMessage(text);
+  };
+
+  useEffect(() => {
+    if (showHistory) {
+      historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, showHistory]);
+
+  const latestRaghu = [...messages].reverse().find((m) => m.role === "raghu")?.text || "Namaste, beta. Welcome to Bhima's Hollow. Speak to me or ask any farming advice!";
+
   return (
     <WebGLBoundary onFallback={onFallback}>
-      <div className="three-scene-wrapper" aria-hidden="true">
+      <div className="three-scene-wrapper">
         <Suspense fallback={<ThreeLoadingScreen />}>
           <Canvas
             shadows={quality !== "low"}
             dpr={dpr}
             frameloop={isTabVisible ? "always" : "never"}
-            camera={{ position: [0, 2.5, 6.8], fov: 45 }}
+            camera={{ position: [0, 2.1, 5.8], fov: 46 }}
             gl={{
               antialias: quality !== "low",
               powerPreference: "high-performance",
@@ -126,17 +200,12 @@ export default function FarmScene({
               reducedMotion={reducedMotion}
             />
 
-            {/* Low-Poly Animated Raghu with Floating 3D Dialogue */}
+            {/* Low-Poly Animated Raghu Character */}
             <RaghuModel
               trust={trust}
               mood={mood}
               isSpeaking={isSpeaking}
               reducedMotion={reducedMotion}
-              messages={messages}
-              isThinking={isThinking}
-              onSendMessage={onSendMessage}
-              voiceEnabled={voiceEnabled}
-              onToggleVoice={onToggleVoice}
             />
 
             {/* 3D Hotspot Interactive Billboards */}
@@ -164,6 +233,128 @@ export default function FarmScene({
             />
           </Canvas>
         </Suspense>
+
+        {/* ── 3D In-World Character Dialogue HUD Overlaid on Raghu ── */}
+        <div className="world-raghu-dialogue-hud">
+          {/* Header Bar */}
+          <div className="hud-header">
+            <div className="hud-profile-pill">
+              <span className="hud-avatar">👴</span>
+              <div className="hud-meta">
+                <span className="hud-name">Raghu the Elder</span>
+                <span className={`hud-mood-badge mood-${mood}`}>[{mood}]</span>
+              </div>
+            </div>
+
+            <div className="hud-controls">
+              <button
+                type="button"
+                className={`hud-icon-btn ${showHistory ? "active" : ""}`}
+                onClick={() => setShowHistory(!showHistory)}
+                title="View Conversation Log"
+              >
+                <History size={14} />
+                <span className="hud-badge-count">{messages.length}</span>
+              </button>
+
+              {onToggleVoice && (
+                <button
+                  type="button"
+                  className={`hud-icon-btn ${voiceEnabled ? "active" : ""}`}
+                  onClick={onToggleVoice}
+                  title={voiceEnabled ? "Mute Voice" : "Enable Voice"}
+                >
+                  {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Collapsible History Drawer */}
+          {showHistory && (
+            <div className="hud-history-drawer">
+              <div className="hud-history-title">
+                <MessageSquare size={12} />
+                <span>Dialogue History with Raghu</span>
+              </div>
+              <div className="hud-history-list">
+                {messages.length === 0 ? (
+                  <p className="hud-history-empty">No conversation recorded yet. Say hello!</p>
+                ) : (
+                  messages.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className={`hud-history-item ${m.role === "player" ? "msg-player" : "msg-raghu"}`}
+                    >
+                      <span className="sender-tag">{m.role === "player" ? "You" : "Raghu"}:</span>
+                      <span className="sender-text">{m.text}</span>
+                    </div>
+                  ))
+                )}
+                <div ref={historyEndRef} />
+              </div>
+            </div>
+          )}
+
+          {/* Raghu's Active Spoken Dialogue */}
+          <div className="hud-speech-bubble">
+            <div className="bubble-speaker-tag">
+              <span>{isThinking ? "Raghu is thinking..." : "Raghu says:"}</span>
+              {isSpeaking && <span className="speaking-pulse">🔊 Speaking</span>}
+            </div>
+            <p className={`bubble-text ${isThinking ? "is-thinking" : ""}`}>
+              {isThinking ? "Hmm... let me consider this carefully..." : latestRaghu}
+            </p>
+          </div>
+
+          {/* In-World Input Bar */}
+          {onSendMessage && (
+            <form className="hud-input-bar" onSubmit={handleSubmit}>
+              <button
+                type="button"
+                className={`hud-mic-btn ${isListening ? "is-listening" : ""}`}
+                onClick={toggleMic}
+                title={isListening ? "Listening to your voice..." : "Voice input (Click & speak)"}
+              >
+                {isListening ? <MicOff size={15} /> : <Mic size={15} />}
+              </button>
+
+              <input
+                type="text"
+                className="hud-text-input"
+                placeholder="Speak or type to Raghu directly..."
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                disabled={isThinking}
+              />
+
+              <button
+                type="submit"
+                className="hud-send-btn"
+                disabled={!inputVal.trim() || isThinking}
+                title="Send to Raghu"
+              >
+                <Send size={15} />
+              </button>
+            </form>
+          )}
+
+          {/* Quick Suggestions Chips */}
+          {onSendMessage && !isThinking && (
+            <div className="hud-suggestion-chips">
+              {demoChips.map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="hud-chip"
+                  onClick={() => onSendMessage(chip.text)}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </WebGLBoundary>
   );
