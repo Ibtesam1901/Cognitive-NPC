@@ -574,6 +574,17 @@ export default function App() {
                   sound.playPop();
                   handleFarmAction("PET_DOG");
                 }}
+                onFeedCow={() => {
+                  if (!npcState?.flags?.cowFedToday) {
+                    sound.playChime();
+                    handleFarmAction("FEED_COW");
+                  } else if (!npcState?.flags?.milkCollectedToday) {
+                    sound.playChime();
+                    handleFarmAction("MILK_COW");
+                  } else {
+                    showToast("Lakshmi is resting happily and chewing cud. Come back tomorrow!", "info");
+                  }
+                }}
                 onInspectHotspot={(id) => {
                   if (id === "lakshmi_cow") {
                     // Check if cow is fed

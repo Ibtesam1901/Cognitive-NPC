@@ -9,8 +9,8 @@ import * as THREE from "three";
  */
 export function BarnAndLakshmi({
   position = [4.8, 0, 1.2],
-  isCowFound = false,
   reducedMotion = false,
+  onCowClick,
 }) {
   const headRef = useRef();
   const tailRef = useRef();
@@ -30,7 +30,6 @@ export function BarnAndLakshmi({
   }, []);
 
   useFrame((state) => {
-    if (!isCowFound) return;
     const time = state.clock.elapsedTime;
 
     // Gentle head bob (chewing cud)
@@ -97,7 +96,15 @@ export function BarnAndLakshmi({
       </group>
 
       {/* Lakshmi the Cow (Indian Zebu sacred farm cow) */}
-      <group position={[0, 0.55, 0]} rotation={[0, Math.PI / 2, 0]}>
+      <group
+        position={[0, 0.55, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onCowClick) onCowClick();
+        }}
+        cursor="pointer"
+      >
         {/* Main Cow Body (Barrel) */}
         <mesh position={[0, 0.45, 0]} castShadow material={materials.cowWhite}>
           <boxGeometry args={[1.3, 0.75, 0.65]} />

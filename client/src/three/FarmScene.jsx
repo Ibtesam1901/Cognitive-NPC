@@ -263,8 +263,8 @@ export default function FarmScene({
             {/* Cattle Barn & Lakshmi the Cow - positioned neatly in the East paddock */}
             <BarnAndLakshmi
               position={[5.2, 0, 0.2]}
-              isCowFound={isCowFound}
               reducedMotion={reducedMotion}
+              onCowClick={onFeedCow}
             />
 
             {/* Sheru the Courtyard Village Dog */}
