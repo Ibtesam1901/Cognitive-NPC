@@ -40,9 +40,8 @@ import { KitchenModal } from "./components/KitchenModal.jsx";
 import { SalimChatModal } from "./components/SalimChatModal.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import { audioManager } from "./utils/audioManager.js";
+import FarmScene from "./three/FarmScene.jsx";
 import "./App.css";
-
-const FarmScene = lazy(() => import("./three/FarmScene.jsx"));
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -321,6 +320,14 @@ export default function App() {
             showToast(ev.text, "info");
           }
         }
+
+        // Live Engine Verification stream log
+        if (data.message) {
+          setActionLog((prev) => [
+            ...prev,
+            { type: "applied", text: data.message, message: data.message },
+          ]);
+        }
       } else {
         showToast(data.message || "Action failed", "error");
         sound.playBuzzer();
@@ -567,6 +574,9 @@ export default function App() {
                 isSpeaking={isThinking}
                 messages={messages}
                 isThinking={isThinking}
+                onSendMessage={handleSendMessage}
+                voiceEnabled={voiceEnabled}
+                onToggleVoice={() => setVoiceEnabled((v) => !v)}
                 onOpenMarket={() => setShowMarket(true)}
                 onOpenKitchen={() => setShowKitchen(true)}
                 onOpenSalimChat={() => setShowSalimChat(true)}

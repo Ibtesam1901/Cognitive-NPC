@@ -186,18 +186,16 @@ export default function FarmScene({
   return (
     <WebGLBoundary onFallback={onFallback}>
       <div className="three-scene-wrapper">
-        <Suspense fallback={<ThreeLoadingScreen />}>
-          <Canvas
-            shadows={quality !== "low"}
-            dpr={dpr}
-            frameloop={isTabVisible ? "always" : "never"}
-            camera={{ position: [0, 3.8, 9.2], fov: 48 }}
-            gl={{
-              antialias: quality !== "low",
-              powerPreference: "high-performance",
-              preserveDrawingBuffer: false,
-            }}
-          >
+        <Canvas
+          shadows={quality !== "low"}
+          dpr={dpr}
+          camera={{ position: [0, 3.8, 9.2], fov: 48 }}
+          gl={{
+            antialias: quality !== "low",
+            powerPreference: "high-performance",
+            preserveDrawingBuffer: false,
+          }}
+        >
             {/* Dynamic Sky, Sun, Rain & Atmosphere */}
             <SkyAndAtmosphere
               weather={weather}
@@ -295,6 +293,7 @@ export default function FarmScene({
               mood={mood}
               isSpeaking={isSpeaking}
               reducedMotion={reducedMotion}
+              onClick={() => setShowDialogue(true)}
             />
 
             {/* 3D Hotspot Interactive Billboards */}
@@ -329,13 +328,16 @@ export default function FarmScene({
               enabled={true}
             />
           </Canvas>
-        </Suspense>
 
         {/* ── Contextual "Talk to Raghu" Prompt when walking nearby ── */}
         {isNearRaghu && !showDialogue && (
-          <div className="player-talk-prompt">
+          <div
+            className="player-talk-prompt"
+            style={{ cursor: "pointer" }}
+            onClick={() => setShowDialogue(true)}
+          >
             <span className="talk-key-badge">E</span>
-            <span className="talk-text">Talk with Raghu</span>
+            <span className="talk-text">Talk with Raghu (Click or press E)</span>
           </div>
         )}
 

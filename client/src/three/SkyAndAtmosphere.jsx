@@ -184,8 +184,23 @@ export function SkyAndAtmosphere({
     };
   }, [isRaining, isDrought, isNight, isDawnOrDusk, farmHealth, sunX, sunY, sunZ]);
 
+  // Procedural sky / fog background color
+  const skyColor = isRaining
+    ? "#475569"
+    : isDrought
+    ? "#fdba74"
+    : isNight
+    ? "#090d16"
+    : isDawnOrDusk
+    ? "#fed7aa"
+    : "#93c5fd";
+
   return (
     <>
+      {/* Crisp Atmospheric Sky & Depth Fog */}
+      <color attach="background" args={[skyColor]} />
+      <fog attach="fog" args={[skyColor, 18, 42]} />
+
       {/* Ambient Fill Light */}
       <ambientLight intensity={ambientIntensity} color={ambientColor} />
 

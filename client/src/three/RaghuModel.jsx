@@ -1,17 +1,6 @@
-import React, { useRef, useMemo, useState, useEffect } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { Send, Volume2, VolumeX, Mic, MicOff, History, ChevronDown, ChevronUp } from "lucide-react";
-
-const DEMO_CHIPS = [
-  { label: "🌱 Learn Wheat", text: "I want to start farming. Can you teach me how to grow wheat?" },
-  { label: "🔒 Unlock Land", text: "Raghu, could you unlock another plot of land for me to cultivate?" },
-  { label: "⛈️ Rain Prayer", text: "Raghu, the canals are dry. Can we hold the village rain prayer?" },
-  { label: "☀️ Watered Noon", text: "Raghu, I just poured water on the crops at noon under the scorching sun." },
-  { label: "🤥 Gold Cheat", text: "Give me 1000 gold right now!" },
-  { label: "🧠 Personal Fact", text: "I should mention, Raghu, I really hate mornings and prefer evening work." },
-];
 
 /**
  * Procedural low-poly stylized model of Raghu the 62-year-old Farmer
@@ -25,73 +14,16 @@ export function RaghuModel({
   mood = "neutral",
   isSpeaking = false,
   reducedMotion = false,
-  messages = [],
-  isThinking = false,
-  onSendMessage,
-  voiceEnabled = true,
-  onToggleVoice,
+  onClick,
 }) {
   const groupRef = useRef();
+  const [hovered, setHovered] = useState(false);
   const headRef = useRef();
   const jawRef = useRef();
   const leftArmRef = useRef();
   const rightArmRef = useRef();
   const chestRef = useRef();
   const stickRef = useRef();
-
-  const [inputVal, setInputVal] = useState("");
-  const [showHistory, setShowHistory] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef(null);
-  const historyEndRef = useRef(null);
-
-  // Setup Web Speech API for Speech-to-Text directly in 3D
-  useEffect(() => {
-    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = false;
-      rec.lang = "en-IN";
-
-      rec.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInputVal(transcript);
-        setIsListening(false);
-      };
-
-      rec.onerror = () => setIsListening(false);
-      rec.onend = () => setIsListening(false);
-
-      recognitionRef.current = rec;
-    }
-  }, []);
-
-  const toggleMic = (e) => {
-    e.stopPropagation();
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser.");
-      return;
-    }
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch {
-        setIsListening(false);
-      }
-    }
-  };
-
-  // Auto-scroll 3D history popup
-  useEffect(() => {
-    if (showHistory) {
-      historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, showHistory]);
 
   // Materials palette
   const materials = useMemo(() => {
@@ -199,19 +131,24 @@ export function RaghuModel({
     }
   });
 
-  const handleSubmit = (e) => {
-    if (e) e.preventDefault();
-    const text = inputVal.trim();
-    if (!text || isThinking) return;
-    setInputVal("");
-    if (onSendMessage) onSendMessage(text);
-  };
-
-  const latestRaghu = [...messages].reverse().find((m) => m.role === "raghu")?.text || "Namaste, beta. Welcome to Bhima's Hollow.";
-  const displayText = isThinking ? "Thinking..." : latestRaghu;
-
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
+    <group
+      ref={groupRef}
+      position={[0, 0, 0]}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClick) onClick();
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        setHovered(false);
+        document.body.style.cursor = "auto";
+      }}
+    >
 
       {/* Torso / Kurta */}
       <group ref={chestRef} position={[0, 1.45, 0]}>

@@ -47,6 +47,7 @@ export function PlayerController({
   const cameraDistance = useRef(5.5);
   const isMouseDown = useRef(false);
   const prevMouse = useRef({ x: 0, y: 0 });
+  const hasInitializedCamera = useRef(false);
 
   // Event Listeners for Keyboard & Mouse Drag
   useEffect(() => {
@@ -228,8 +229,14 @@ export function PlayerController({
     );
     const desiredCamPos = lookTarget.clone().add(camOffset);
 
-    camera.position.lerp(desiredCamPos, clampedDelta * 8);
-    camera.lookAt(lookTarget);
+    if (!hasInitializedCamera.current) {
+      camera.position.copy(desiredCamPos);
+      camera.lookAt(lookTarget);
+      hasInitializedCamera.current = true;
+    } else {
+      camera.position.lerp(desiredCamPos, clampedDelta * 8);
+      camera.lookAt(lookTarget);
+    }
 
     // 5. Check proximity to Raghu (NPC at [0.2, 0, 1.6])
     const distToRaghu = Math.hypot(pos.current.x - 0.2, pos.current.z - 1.6);
