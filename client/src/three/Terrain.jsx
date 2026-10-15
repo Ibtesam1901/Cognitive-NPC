@@ -442,10 +442,13 @@ export function Terrain({
           { pos: [0.2, 0, 1.8], s: [2.0, 0.02, 1.4] },
           { pos: [0.2, 0, 3.2], s: [1.6, 0.02, 1.4] },
           
-          // West Road to Stone Well & Cultivation Fields
-          { pos: [-1.2, 0, 2.0], s: [1.4, 0.02, 1.2] },
+          // South Courtyard Well Square & Plaza (connecting Raghu's porch to the Stone Well)
+          { pos: [-0.4, 0, 3.8], s: [1.4, 0.02, 1.4] },
+          { pos: [-1.2, 0, 4.8], s: [2.6, 0.02, 2.6] }, // Dedicated Well Plaza apron flagstones
+
+          // West Road to Cultivation Fields
+          { pos: [-1.4, 0, 2.0], s: [1.4, 0.02, 1.2] },
           { pos: [-2.6, 0, 2.0], s: [1.6, 0.02, 1.2] },
-          { pos: [-3.8, 0, 2.0], s: [1.8, 0.02, 1.6] }, // Well apron flagstones
           
           // Field North-South Access Avenue (running between x: -5.7)
           { pos: [-5.7, 0, -2.6], s: [1.0, 0.02, 2.6] },
@@ -578,8 +581,8 @@ export function Terrain({
         </group>
       </group>
 
-      {/* Minecraft-style Stone Well */}
-      <group position={[-3.8, 0, 2.8]}>
+      {/* Minecraft-style Stone Well relocated to South Courtyard Plaza */}
+      <group position={[-1.2, 0, 4.8]}>
         {/* Cobblestone well ring (octagonal / square voxel base) */}
         <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.6, 0.9, 1.6]} />

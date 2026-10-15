@@ -57,8 +57,8 @@ export function Hotspots({
         </Html>
       </group>
 
-      {/* Hotspot 3: Ancient Stone Well */}
-      <group position={[-3.8, 1.8, 2.8]}>
+      {/* Hotspot 3: Ancient Stone Well (South Courtyard Plaza) */}
+      <group position={[-1.2, 1.8, 4.8]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
             className="three-hotspot-btn"
