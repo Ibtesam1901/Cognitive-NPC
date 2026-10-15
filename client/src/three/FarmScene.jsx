@@ -326,6 +326,7 @@ export default function FarmScene({
               onFootstep={onFootstep}
               joystickInput={joystickInput}
               enabled={true}
+              isSunsetOrNight={time >= 17 || time < 6}
             />
           </Canvas>
 

@@ -19,9 +19,12 @@ export function PlayerController({
   onFootstep,
   joystickInput = null, // { x: -1..1, y: -1..1 }
   enabled = true,
+  isSunsetOrNight = false,
 }) {
   const playerRef = useRef();
   const avatarGroupRef = useRef();
+  const torchLightRef = useRef();
+  const torchFlameRef = useRef();
   const { camera, gl } = useThree();
 
   // Internal physics & motion vectors
@@ -220,6 +223,16 @@ export function PlayerController({
       }
     }
 
+    // Torch flame and light flicker animation during sunset or night
+    if (isSunsetOrNight && torchLightRef.current) {
+      const flicker = Math.sin(delta * 25 + pos.current.x) * 0.15 + Math.cos(delta * 18 + pos.current.z) * 0.1;
+      torchLightRef.current.intensity = 1.8 + flicker;
+      if (torchFlameRef.current) {
+        const scaleFlicker = 1 + Math.sin(delta * 30) * 0.12;
+        torchFlameRef.current.scale.set(scaleFlicker, scaleFlicker * 1.1, scaleFlicker);
+      }
+    }
+
     // 4. Smooth Camera Follow
     const lookTarget = new THREE.Vector3(pos.current.x, pos.current.y + 0.9, pos.current.z);
     const camOffset = new THREE.Vector3(
@@ -283,14 +296,72 @@ export function PlayerController({
         </mesh>
 
         {/* Arms */}
+        {/* Left Arm */}
         <mesh position={[-0.26, 0.65, 0]} castShadow>
           <boxGeometry args={[0.1, 0.34, 0.12]} />
           <meshStandardMaterial color="#0e7490" roughness={0.8} flatShading />
         </mesh>
-        <mesh position={[0.26, 0.65, 0]} castShadow>
-          <boxGeometry args={[0.1, 0.34, 0.12]} />
-          <meshStandardMaterial color="#0e7490" roughness={0.8} flatShading />
-        </mesh>
+
+        {/* Right Arm & Hand (raised slightly when holding torch at sunset/night) */}
+        <group position={[0.26, 0.65, 0]}>
+          <mesh
+            position={[0, isSunsetOrNight ? -0.04 : 0, isSunsetOrNight ? 0.08 : 0]}
+            rotation={[isSunsetOrNight ? -0.65 : 0, 0, 0]}
+            castShadow
+          >
+            <boxGeometry args={[0.1, 0.34, 0.12]} />
+            <meshStandardMaterial color="#0e7490" roughness={0.8} flatShading />
+          </mesh>
+
+          {/* Minecraft / Low-Poly Wooden Hand Torch */}
+          {isSunsetOrNight && (
+            <group position={[0.02, 0.08, 0.28]} rotation={[-0.3, 0, 0.1]}>
+              {/* Torch Wood Handle Stick */}
+              <mesh position={[0, -0.15, 0]} castShadow>
+                <boxGeometry args={[0.06, 0.42, 0.06]} />
+                <meshStandardMaterial color="#451a03" roughness={0.9} flatShading />
+              </mesh>
+
+              {/* Charcoal / Burnt Wick Top */}
+              <mesh position={[0, 0.08, 0]} castShadow>
+                <boxGeometry args={[0.07, 0.08, 0.07]} />
+                <meshStandardMaterial color="#1c1917" roughness={0.9} />
+              </mesh>
+
+              {/* Stylized Glowing Flame Mesh */}
+              <group ref={torchFlameRef} position={[0, 0.16, 0]}>
+                {/* Inner Core Flame (Bright Yellow) */}
+                <mesh>
+                  <boxGeometry args={[0.08, 0.12, 0.08]} />
+                  <meshBasicMaterial color="#fef08a" />
+                </mesh>
+                {/* Outer Flame (Warm Orange) */}
+                <mesh position={[0, 0.03, 0]}>
+                  <boxGeometry args={[0.11, 0.15, 0.11]} />
+                  <meshStandardMaterial
+                    color="#f97316"
+                    emissive="#ea580c"
+                    emissiveIntensity={1.8}
+                    transparent
+                    opacity={0.85}
+                  />
+                </mesh>
+              </group>
+
+              {/* Dynamic Point Light casting warm radiant glow onto surroundings */}
+              <pointLight
+                ref={torchLightRef}
+                position={[0, 0.25, 0]}
+                color="#f59e0b"
+                intensity={2.2}
+                distance={11}
+                decay={2}
+                castShadow
+                shadow-bias={-0.002}
+              />
+            </group>
+          )}
+        </group>
 
         {/* Head */}
         <mesh position={[0, 1.0, 0]} castShadow>
