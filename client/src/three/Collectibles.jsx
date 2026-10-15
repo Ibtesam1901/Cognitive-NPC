@@ -15,7 +15,7 @@ export const COLLECTIBLES_CATALOG = [
   {
     id: "old_coin",
     name: "Old Copper Coin",
-    pos: [-1.2, 0.15, 3.8],
+    pos: [3.8, 0.15, -3.8],
     icon: "🪙",
     color: "#f59e0b",
     lore: "A weathered copper coin bearing royal grain engravings from generations past.",

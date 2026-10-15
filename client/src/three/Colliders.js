@@ -15,8 +15,8 @@ export const VILLAGE_OBSTACLES = [
   // Cattle Barn & Lakshmi (centered at [5.2, 0, 0.2])
   { id: "cattle_barn", type: "box", minX: 3.5, maxX: 7.0, minZ: -1.8, maxZ: 2.2 },
 
-  // Ancient Stone Well (at South Courtyard Plaza [-1.2, 0, 4.8])
-  { id: "stone_well", type: "cylinder", x: -1.2, z: 4.8, radius: 1.15 },
+  // Ancient Stone Well (at North Grove Spring Glade [3.8, 0, -4.5])
+  { id: "stone_well", type: "cylinder", x: 3.8, z: -4.5, radius: 1.15 },
 
   // Irrigation Canal Trench (running z: -5.5 to 5.5 at x: 2.4)
   { id: "canal_pump", type: "box", minX: 1.8, maxX: 3.2, minZ: -3.0, maxZ: -1.8 },
