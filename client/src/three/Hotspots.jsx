@@ -3,70 +3,56 @@ import { Html } from "@react-three/drei";
 
 /**
  * Interactive 3D Hotspot Billboards:
- * Connects directly to existing App.jsx handlers (never makes new API calls)
+ * Connects directly to App.jsx handlers to inspect story landmarks and trigger clues/toasts.
  */
 export function Hotspots({
   flags = {},
   quests = [],
-  _inventory = [],
+  _inventory = {},
+  onInspect,
   onPumpClick,
   onNorthFieldClick,
   onWellClick,
   onMapClick,
 }) {
-  const isPumpRepaired = Boolean(flags.pump_repaired);
-  const isCowFound = Boolean(flags.found_cow);
-  const cowQuestActive = quests.some((q) => q.id === "find_cow" && q.status === "active");
-  const pumpQuestActive = quests.some((q) => q.id === "fix_pump" && q.status === "active");
+  const firstHarvestActive = quests.some((q) => q.id === "first_harvest" && q.status === "active");
+  const dawnWateringActive = quests.some((q) => q.id === "dawn_watering" && q.status === "active");
+  const villagePrayerActive = quests.some((q) => q.id === "village_prayer" && q.status === "active");
 
   return (
     <group>
-      {/* Hotspot 1: Irrigation Pump */}
+      {/* Hotspot 1: Irrigation Canal & Pump */}
       <group position={[1.8, 1.4, -2.4]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
-            className={`three-hotspot-btn ${isPumpRepaired ? "completed" : pumpQuestActive ? "active" : ""}`}
+            className={`three-hotspot-btn ${dawnWateringActive ? "active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
               if (onPumpClick) onPumpClick();
+              else if (onInspect) onInspect("irrigation_canal");
             }}
-            title={
-              isPumpRepaired
-                ? "Irrigation pump running at full pressure"
-                : pumpQuestActive
-                ? "Calibrate pump valves (Puzzle 1)"
-                : "Antique diesel pump - inspect blueprint first"
-            }
+            title="Irrigation canal & water pump"
           >
-            <span className="hotspot-icon">🔧</span>
-            <span className="hotspot-text">
-              {isPumpRepaired ? "Pump (Running)" : "Irrigation Pump"}
-            </span>
+            <span className="hotspot-icon">💧</span>
+            <span className="hotspot-text">Irrigation Canal</span>
           </button>
         </Html>
       </group>
 
-      {/* Hotspot 2: Dead Banyan Tree / North Field */}
+      {/* Hotspot 2: Dead Banyan Tree / Sacred Roots */}
       <group position={[-5.2, 2.2, -5.5]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
-            className={`three-hotspot-btn ${isCowFound ? "completed" : cowQuestActive ? "active" : ""}`}
+            className={`three-hotspot-btn ${villagePrayerActive ? "active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
               if (onNorthFieldClick) onNorthFieldClick();
+              else if (onInspect) onInspect("ancient_banyan");
             }}
-            title={
-              isCowFound
-                ? "North scrub explored - Lakshmi brought home"
-                : cowQuestActive
-                ? "Search North Field near Dead Banyan"
-                : "Dead Banyan Tree & cattle trail"
-            }
+            title="Ancient Banyan Tree - landmark of Bhima's Hollow"
           >
-            <span className="hotspot-icon">🔍</span>
-            <span className="hotspot-text">
-              {isCowFound ? "North Field (Explored)" : "Dead Banyan"}
-            </span>
+            <span className="hotspot-icon">🌳</span>
+            <span className="hotspot-text">Ancient Banyan</span>
           </button>
         </Html>
       </group>
@@ -79,28 +65,30 @@ export function Hotspots({
             onClick={(e) => {
               e.stopPropagation();
               if (onWellClick) onWellClick();
+              else if (onInspect) onInspect("village_well");
             }}
-            title="Ancient Dry Well - inspect trail deduction"
+            title="Ancient Stone Well - cool fresh groundwater"
           >
             <span className="hotspot-icon">🧱</span>
-            <span className="hotspot-text">Ancient Well</span>
+            <span className="hotspot-text">Stone Well</span>
           </button>
         </Html>
       </group>
 
-      {/* Hotspot 4: Farmhouse Verandah & Schematics */}
-      <group position={[1.3, 1.3, -0.9]}>
+      {/* Hotspot 4: Farmhouse Verandah & Crop Fields */}
+      <group position={[-2.5, 1.2, -1.8]}>
         <Html center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
-            className="three-hotspot-btn"
+            className={`three-hotspot-btn ${firstHarvestActive ? "active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
               if (onMapClick) onMapClick();
+              else if (onInspect) onInspect("cultivation_plots");
             }}
-            title="Examine antique valley map & clues"
+            title="Tilled Cultivation Beds"
           >
-            <span className="hotspot-icon">🗺️</span>
-            <span className="hotspot-text">Valley Map Clue</span>
+            <span className="hotspot-icon">🌾</span>
+            <span className="hotspot-text">Wheat Plots</span>
           </button>
         </Html>
       </group>

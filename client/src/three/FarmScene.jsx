@@ -39,6 +39,7 @@ export default function FarmScene({
   isSpeaking = false,
   quality = "medium", // 'low' | 'medium' | 'high'
   onFallback,
+  onInspectHotspot,
   onPumpClick,
   onNorthFieldClick,
   onWellClick,
@@ -133,6 +134,7 @@ export default function FarmScene({
               flags={flags}
               quests={quests}
               inventory={inventory}
+              onInspect={onInspectHotspot}
               onPumpClick={onPumpClick}
               onNorthFieldClick={onNorthFieldClick}
               onWellClick={onWellClick}

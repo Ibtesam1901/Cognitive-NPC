@@ -3137,7 +3137,7 @@
 }
 
 .mobile-tabs-bar {
-  display: none;
+  display: flex;
   gap: 6px;
 }
 
@@ -4455,16 +4455,14 @@
 }
 
 /* Responsive Media Queries */
+.col-hidden {
+  display: none !important;
+}
+
 @media (max-width: 1200px) {
   .npc-main-dashboard {
     grid-template-columns: 1fr;
     gap: 16px;
-  }
-  .mobile-tabs-bar {
-    display: flex;
-  }
-  .col-hidden {
-    display: none !important;
   }
   .farm-hud-header {
     grid-template-columns: 1fr 1fr;
