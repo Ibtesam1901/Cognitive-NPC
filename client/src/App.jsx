@@ -32,6 +32,7 @@ import { ChatPanel } from "./components/ChatPanel.jsx";
 import { FarmPanel } from "./components/FarmPanel.jsx";
 import { JournalPanel } from "./components/JournalPanel.jsx";
 import { StoryModal } from "./components/StoryModal.jsx";
+import { QuestTrackerHUD } from "./components/QuestTrackerHUD.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import { audioManager } from "./utils/audioManager.js";
 import "./App.css";
@@ -636,6 +637,9 @@ export default function App() {
                 }}
               />
             </Suspense>
+
+            {/* In-Game Quest Tracker Overlay */}
+            <QuestTrackerHUD quests={npcState?.quests} />
           </div>
         </section>
 
