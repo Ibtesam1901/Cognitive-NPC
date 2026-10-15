@@ -209,9 +209,11 @@ export default function App() {
     }
   };
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   // 4. Reset Farm & Session
-  const handleReset = async () => {
-    if (!window.confirm("Reset Raghu's farm to Day 1? This will renew his trust and field.")) return;
+  const executeReset = async () => {
+    setShowResetConfirm(false);
     try {
       const res = await fetch(`${API}/api/npc/reset`, {
         method: "POST",
@@ -228,11 +230,16 @@ export default function App() {
         },
       ]);
       setActionLog([]);
-      showToast("Farm refreshed to Day 1 sunrise!", "info");
+      showToast("Farm refreshed to Day 1 sunrise!", "success");
       sound.playChime();
     } catch (err) {
       console.error("Reset error:", err);
+      showToast("Failed to reset session", "error");
     }
+  };
+
+  const handleReset = () => {
+    setShowResetConfirm(true);
   };
 
   const handleSaveSettings = (newConfig) => {
@@ -411,6 +418,71 @@ export default function App() {
           onSave={handleSaveSettings}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {/* Reset Farm Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="modal-backdrop" onClick={() => setShowResetConfirm(false)}>
+          <div
+            className="settings-modal-card reset-confirm-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3>🌾 Reset Raghu's Farm?</h3>
+              <button
+                className="close-modal-btn"
+                onClick={() => setShowResetConfirm(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: "20px" }}>
+              <p style={{ color: "#e2e8f0", fontSize: "0.95rem", lineHeight: 1.5, margin: 0 }}>
+                This will renew Raghu's farm to <strong>Day 1 Sunrise</strong>, reset all plots to uncultivated earth, replenish starter seeds (3 seeds &amp; 1 water can), and restore Raghu's memory and trust.
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  marginTop: "24px",
+                }}
+              >
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={() => setShowResetConfirm(false)}
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid var(--panel-border)",
+                    color: "#cbd5e1",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="save-btn"
+                  onClick={executeReset}
+                  style={{
+                    background: "#ef4444",
+                    border: "none",
+                    color: "#fff",
+                    fontWeight: 600,
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Yes, Reset Farm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
