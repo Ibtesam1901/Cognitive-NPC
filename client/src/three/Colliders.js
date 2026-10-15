@@ -42,11 +42,11 @@ export const VILLAGE_OBSTACLES = [
 
   // Key Trees around perimeter
   { id: "tree_east_1", type: "cylinder", x: 6.8, z: -4.5, radius: 0.7 },
-  { id: "tree_east_2", type: "cylinder", x: 7.5, z: -1.8, radius: 0.7 },
-  { id: "tree_east_3", type: "cylinder", x: 7.2, z: 1.5, radius: 0.7 },
-  { id: "tree_west_1", type: "cylinder", x: -8.2, z: -4.5, radius: 0.7 },
-  { id: "tree_west_2", type: "cylinder", x: -8.0, z: -1.0, radius: 0.7 },
-  { id: "tree_west_3", type: "cylinder", x: -7.8, z: 2.5, radius: 0.7 },
+  { id: "tree_east_2", type: "cylinder", x: 12.5, z: -2.5, radius: 0.7 },
+  { id: "tree_east_3", type: "cylinder", x: 12.5, z: 3.5, radius: 0.7 },
+  { id: "tree_west_1", type: "cylinder", x: -10.8, z: -4.5, radius: 0.7 },
+  { id: "tree_west_2", type: "cylinder", x: -10.5, z: -1.0, radius: 0.7 },
+  { id: "tree_west_3", type: "cylinder", x: -10.5, z: 2.5, radius: 0.7 },
 ];
 
 /**

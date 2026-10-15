@@ -364,14 +364,16 @@ export function Terrain({
     return list;
   }, [plots]);
 
-  // Vast, neatly arranged fields on the left and south-west side
+  // Harmonious, organized 2x3 agricultural grid in the West Fields
+  // Left Column (Far West): x = -7.4, Right Column (Mid West): x = -4.0
+  // Rows: z = -2.6 (North), z = 0.5 (Center), z = 3.6 (South)
   const plotPositions = [
-    [-4.6, 0, -1.8], // Plot 1 (Spacious North-West)
-    [-4.6, 0, 1.0],  // Plot 2 (Mid-West)
-    [-1.6, 0, -2.4], // Plot 3 (North-Central)
-    [-4.6, 0, 3.8],  // Plot 4 (South-West)
-    [-1.6, 0, 3.8],  // Plot 5 (South-Central)
-    [-7.6, 0, 1.0],  // Plot 6 (Far-West Paddy)
+    [-4.0, 0, -2.6], // Plot 1: North-East Field (Closest to Well path)
+    [-4.0, 0, 0.5],  // Plot 2: Center-East Field
+    [-4.0, 0, 3.6],  // Plot 3: South-East Field
+    [-7.4, 0, -2.6], // Plot 4: North-West Field
+    [-7.4, 0, 0.5],  // Plot 5: Center-West Field
+    [-7.4, 0, 3.6],  // Plot 6: South-West Field (Paddy)
   ];
 
   // Ground colors
@@ -436,19 +438,33 @@ export function Terrain({
       <group position={[0, 0.01, 0]}>
         {/* Main spine walkway */}
         {[
-          { pos: [-0.2, 0, 1.4], s: [1.4, 0.02, 1.8] },
-          { pos: [-0.4, 0, 2.8], s: [1.2, 0.02, 1.4] },
-          { pos: [-1.4, 0, 2.5], s: [1.4, 0.02, 1.0] },
-          { pos: [-2.6, 0, 2.3], s: [1.2, 0.02, 0.9] },
+          // Central Courtyard & Raghu's Porch steps
+          { pos: [0.2, 0, 1.8], s: [2.0, 0.02, 1.4] },
+          { pos: [0.2, 0, 3.2], s: [1.6, 0.02, 1.4] },
+          
+          // West Road to Stone Well & Cultivation Fields
+          { pos: [-1.2, 0, 2.0], s: [1.4, 0.02, 1.2] },
+          { pos: [-2.6, 0, 2.0], s: [1.6, 0.02, 1.2] },
+          { pos: [-3.8, 0, 2.0], s: [1.8, 0.02, 1.6] }, // Well apron flagstones
+          
+          // Field North-South Access Avenue (running between x: -5.7)
+          { pos: [-5.7, 0, -2.6], s: [1.0, 0.02, 2.6] },
+          { pos: [-5.7, 0, 0.5], s: [1.0, 0.02, 3.6] },
+          { pos: [-5.7, 0, 3.6], s: [1.0, 0.02, 2.6] },
+          
+          // Field East-West connector paths into the avenue
+          { pos: [-4.0, 0, 2.0], s: [2.4, 0.02, 0.9] },
           { pos: [-2.4, 0, 0.2], s: [1.0, 0.02, 2.4] },
-          { pos: [-2.5, 0, -1.2], s: [1.0, 0.02, 1.6] },
-          { pos: [1.4, 0, 0.8], s: [1.6, 0.02, 0.8] },
-          { pos: [2.8, 0, 0.8], s: [1.5, 0.02, 0.8] },
-          // East road leading across canal to Salim's Market
-          { pos: [4.4, 0, 0.8], s: [1.8, 0.02, 0.9] },
-          { pos: [6.2, 0, 0.8], s: [1.8, 0.02, 0.9] },
-          { pos: [8.0, 0, 0.6], s: [1.8, 0.02, 1.4] },
-          { pos: [9.5, 0, 0.5], s: [3.4, 0.02, 3.4] }, // Market courtyard flagstones
+          { pos: [-2.5, 0, -1.8], s: [1.0, 0.02, 1.6] },
+
+          // East Road across canal to Cattle Barn & Salim's Market
+          { pos: [1.4, 0, 0.8], s: [1.6, 0.02, 1.0] },
+          { pos: [2.4, 0, 0.8], s: [1.4, 0.02, 1.2] }, // Stone canal bridge
+          { pos: [3.8, 0, 0.8], s: [1.6, 0.02, 1.0] },
+          { pos: [5.2, 0, 1.8], s: [1.6, 0.02, 1.0] }, // Barn entrance walkway
+          { pos: [6.0, 0, 0.8], s: [1.8, 0.02, 1.0] },
+          { pos: [7.8, 0, 0.6], s: [1.8, 0.02, 1.2] },
+          { pos: [9.5, 0, 0.5], s: [3.6, 0.02, 3.6] }, // Market courtyard flagstones
         ].map((tile, i) => (
           <mesh key={i} position={tile.pos} receiveShadow>
             <boxGeometry args={[tile.s[0], tile.s[1], tile.s[2]]} />
@@ -604,9 +620,9 @@ export function Terrain({
         </mesh>
       </group>
 
-      {/* Perimeter Oak Fencing around Fields (Minecraft Oak Fence) */}
-      <group position={[-6.3, 0, 0]}>
-        {[-3.0, -1.5, 0, 1.5, 3.0].map((zPos, idx) => (
+      {/* Perimeter Oak Fencing around Fields (Minecraft Oak Fence on West Border) */}
+      <group position={[-9.2, 0, 0]}>
+        {[-4.2, -2.6, -1.0, 0.6, 2.2, 3.8, 5.2].map((zPos, idx) => (
           <group key={idx} position={[0, 0, zPos]}>
             {/* Fence Post */}
             <mesh position={[0, 0.45, 0]} castShadow>
@@ -614,14 +630,38 @@ export function Terrain({
               <meshStandardMaterial color="#452817" roughness={0.9} flatShading />
             </mesh>
             {/* Horizontal Fence Rails */}
-            {idx < 4 && (
+            {idx < 6 && (
               <>
-                <mesh position={[0, 0.65, 0.75]} castShadow>
-                  <boxGeometry args={[0.06, 0.08, 1.4]} />
+                <mesh position={[0, 0.65, 0.8]} castShadow>
+                  <boxGeometry args={[0.06, 0.08, 1.55]} />
                   <meshStandardMaterial color="#57381e" roughness={0.9} flatShading />
                 </mesh>
-                <mesh position={[0, 0.35, 0.75]} castShadow>
-                  <boxGeometry args={[0.06, 0.08, 1.4]} />
+                <mesh position={[0, 0.35, 0.8]} castShadow>
+                  <boxGeometry args={[0.06, 0.08, 1.55]} />
+                  <meshStandardMaterial color="#57381e" roughness={0.9} flatShading />
+                </mesh>
+              </>
+            )}
+          </group>
+        ))}
+      </group>
+
+      {/* Field South Border Fence with Gate */}
+      <group position={[-5.7, 0, 5.2]}>
+        {[-3.5, -2.0, -0.5, 1.0, 2.5].map((xOffset, idx) => (
+          <group key={idx} position={[xOffset, 0, 0]}>
+            <mesh position={[0, 0.45, 0]} castShadow>
+              <boxGeometry args={[0.12, 0.9, 0.12]} />
+              <meshStandardMaterial color="#452817" roughness={0.9} flatShading />
+            </mesh>
+            {idx < 4 && idx !== 1 && (
+              <>
+                <mesh position={[0.75, 0.65, 0]} castShadow>
+                  <boxGeometry args={[1.45, 0.08, 0.06]} />
+                  <meshStandardMaterial color="#57381e" roughness={0.9} flatShading />
+                </mesh>
+                <mesh position={[0.75, 0.35, 0]} castShadow>
+                  <boxGeometry args={[1.45, 0.08, 0.06]} />
                   <meshStandardMaterial color="#57381e" roughness={0.9} flatShading />
                 </mesh>
               </>

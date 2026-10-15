@@ -240,11 +240,11 @@ export default function FarmScene({
             <VoxelTree position={[12.5, 0, 3.5]} scale={1.0} type="fruit" />
             <VoxelTree position={[7.5, 0, 4.8]} scale={1.05} type="birch" />
 
-            {/* West Field Windbreak Trees (Sheltering the crops) */}
-            <VoxelTree position={[-8.2, 0, -4.5]} scale={1.1} type="birch" />
-            <VoxelTree position={[-8.0, 0, -1.0]} scale={1.2} type="spruce" />
-            <VoxelTree position={[-7.8, 0, 2.5]} scale={1.05} type="oak" />
-            <VoxelTree position={[-6.8, 0, 5.0]} scale={1.0} type="fruit" />
+            {/* West Field Windbreak Trees (Sheltering the outer fence border) */}
+            <VoxelTree position={[-10.8, 0, -4.5]} scale={1.1} type="birch" />
+            <VoxelTree position={[-10.5, 0, -1.0]} scale={1.2} type="spruce" />
+            <VoxelTree position={[-10.5, 0, 2.5]} scale={1.05} type="oak" />
+            <VoxelTree position={[-10.2, 0, 5.2]} scale={1.0} type="fruit" />
 
             {/* Antique Irrigation Diesel Pump - positioned by canal culvert */}
             <IrrigationPump
