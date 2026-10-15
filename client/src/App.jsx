@@ -32,6 +32,7 @@ import { ChatPanel } from "./components/ChatPanel.jsx";
 import { FarmPanel } from "./components/FarmPanel.jsx";
 import { JournalPanel } from "./components/JournalPanel.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
+import { audioManager } from "./utils/audioManager.js";
 import "./App.css";
 
 const FarmScene = lazy(() => import("./three/FarmScene.jsx"));
@@ -120,6 +121,57 @@ export default function App() {
     };
     fetchState();
   }, []);
+
+  // 2. Day/Night Cycle Loop (1 real minute = 4 game hours; 6 real minutes = 24 game hours)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNpcState((prev) => {
+        if (!prev) return prev;
+        const nextTime = (prev.time + 1) % 24;
+        const nextDay = nextTime === 0 ? prev.day + 1 : prev.day;
+
+        // Morning roll: if advancing to morning (time 6), roll weather if not forced
+        let nextWeather = prev.weather;
+        let plots = prev.plots;
+
+        if (nextTime === 6) {
+          // 25% chance of blessed rain, otherwise clear
+          nextWeather = Math.random() < 0.25 ? "rain" : "clear";
+
+          // If rain, naturally water crops; otherwise grow watered crops
+          plots = prev.plots.map((plot) => {
+            if (plot.locked || !plot.crop) return plot;
+            const willWater = nextWeather === "rain" || plot.watered;
+            const newGrowth = plot.watered ? Math.min(2, plot.growth + 1) : plot.growth;
+            return {
+              ...plot,
+              growth: newGrowth,
+              watered: nextWeather === "rain", // reset or rain watered
+            };
+          });
+        }
+
+        audioManager.updateAtmosphere(nextTime, nextWeather);
+
+        return {
+          ...prev,
+          day: nextDay,
+          time: nextTime,
+          weather: nextWeather,
+          plots,
+        };
+      });
+    }, 15000); // 15 seconds = 1 game hour
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update audio atmosphere when weather or time changes
+  useEffect(() => {
+    if (npcState) {
+      audioManager.updateAtmosphere(npcState.time, npcState.weather);
+    }
+  }, [npcState?.time, npcState?.weather]);
 
   // 2. Send Chat Message to Raghu
   const handleSendMessage = async (text) => {
@@ -396,6 +448,18 @@ export default function App() {
             </button>
           </div>
 
+          {/* Audio Master Mute/Unmute */}
+          <button
+            className="game-icon-btn"
+            onClick={() => {
+              const muted = audioManager.toggleMute();
+              showToast(muted ? "Audio muted" : "Audio unmuted", "info");
+            }}
+            title="Toggle Ambient & SFX Audio"
+          >
+            {audioManager.isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+          </button>
+
           {/* Theme & Settings */}
           <button
             className="game-icon-btn"
@@ -456,6 +520,25 @@ export default function App() {
                 onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
                 onInspectHotspot={(id) => {
                   showToast(`Inspected 3D Hotspot: ${id}`, "info");
+                }}
+                onFootstep={(x, z) => {
+                  // Determine surface based on player coordinates
+                  // Wood Verandah (around [0.2, 0, 0.5])
+                  if (x > -2.2 && x < 2.4 && z > -0.5 && z < 1.6) {
+                    audioManager.playFootstep("wood");
+                  }
+                  // Cobblestone walkway paths
+                  else if (
+                    (x > -0.8 && x < 0.4 && z > 1.2 && z < 3.2) ||
+                    (x > -3.0 && x < -1.0 && z > 2.0 && z < 3.0) ||
+                    (x > -3.0 && x < -1.8 && z > -1.5 && z < 1.5)
+                  ) {
+                    audioManager.playFootstep("stone");
+                  }
+                  // Grass / Soil default
+                  else {
+                    audioManager.playFootstep("grass");
+                  }
                 }}
               />
             </Suspense>

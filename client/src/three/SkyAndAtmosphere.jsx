@@ -114,6 +114,24 @@ export function SkyAndAtmosphere({
 
   const enableShadows = quality !== "low";
 
+  // Night-time procedural twinkling stars
+  const starPositions = useMemo(() => {
+    const count = 180;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (pseudoRandom(i * 3 + 40) - 0.5) * 32;
+      pos[i * 3 + 1] = 6.0 + pseudoRandom(i * 3 + 50) * 10;
+      pos[i * 3 + 2] = (pseudoRandom(i * 3 + 60) - 0.5) * 32;
+    }
+    return pos;
+  }, []);
+
+  // Compute dynamic sun trajectory: angle rotates 0..2PI across 24 hours
+  const sunAngle = ((time - 6) / 24) * Math.PI * 2;
+  const sunX = Math.cos(sunAngle) * 9.5;
+  const sunY = Math.max(0.5, Math.sin(sunAngle) * 8.5);
+  const sunZ = Math.sin(sunAngle * 0.5) * 4.5;
+
   // Compute dynamic lighting parameters based on weather & time
   const { ambientColor, ambientIntensity, sunColor, sunIntensity, sunPos } = useMemo(() => {
     if (isRaining) {
@@ -122,7 +140,7 @@ export function SkyAndAtmosphere({
         ambientIntensity: 0.55,
         sunColor: "#94a3b8",
         sunIntensity: 0.65,
-        sunPos: [4, 8, 3],
+        sunPos: [sunX, sunY, sunZ],
       };
     }
 
@@ -132,27 +150,27 @@ export function SkyAndAtmosphere({
         ambientIntensity: 0.85,
         sunColor: "#f97316", // scorching orange-red sun
         sunIntensity: 2.2,
-        sunPos: [6, 9, 4],
+        sunPos: [sunX, sunY, sunZ],
       };
     }
 
     if (isNight) {
       return {
-        ambientColor: "#1e1b4b", // deep midnight blue
-        ambientIntensity: 0.3,
+        ambientColor: "#0f172a", // deep midnight blue
+        ambientIntensity: 0.28,
         sunColor: "#818cf8", // pale silver moonlight
         sunIntensity: 0.45,
-        sunPos: [-6, 7, -4],
+        sunPos: [-sunX, 6.5, -sunZ],
       };
     }
 
     if (isDawnOrDusk) {
       return {
         ambientColor: "#ffedd5",
-        ambientIntensity: 0.7,
+        ambientIntensity: 0.68,
         sunColor: "#f59e0b", // warm amber sunset
         sunIntensity: 1.5 + (farmHealth / 100) * 0.4,
-        sunPos: [8, 4.5, 6],
+        sunPos: [sunX, sunY, sunZ],
       };
     }
 
@@ -162,16 +180,16 @@ export function SkyAndAtmosphere({
       ambientIntensity: 0.72,
       sunColor: farmHealth > 50 ? "#fef08a" : "#fbbf24",
       sunIntensity: 1.6 + (farmHealth / 100) * 0.5,
-      sunPos: [6, 8, 5],
+      sunPos: [sunX, sunY, sunZ],
     };
-  }, [isRaining, isDrought, isNight, isDawnOrDusk, farmHealth]);
+  }, [isRaining, isDrought, isNight, isDawnOrDusk, farmHealth, sunX, sunY, sunZ]);
 
   return (
     <>
       {/* Ambient Fill Light */}
       <ambientLight intensity={ambientIntensity} color={ambientColor} />
 
-      {/* Main Directional Sun / Moon / Storm Light */}
+      {/* Main Directional Sun / Moon / Storm Light (Shadows follow sun position) */}
       <directionalLight
         position={sunPos}
         intensity={sunIntensity}
@@ -179,11 +197,11 @@ export function SkyAndAtmosphere({
         castShadow={enableShadows && !isRaining}
         shadow-mapSize-width={quality === "high" ? 1024 : 512}
         shadow-mapSize-height={quality === "high" ? 1024 : 512}
-        shadow-camera-far={25}
-        shadow-camera-left={-8}
-        shadow-camera-right={8}
-        shadow-camera-top={8}
-        shadow-camera-bottom={-8}
+        shadow-camera-far={28}
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
         shadow-bias={-0.0005}
       />
 
@@ -191,8 +209,29 @@ export function SkyAndAtmosphere({
       <directionalLight
         position={[-sunPos[0], 4, -sunPos[2]]}
         intensity={isRaining ? 0.35 : 0.25}
-        color={isRaining ? "#38bdf8" : isNight ? "#312e81" : "#93c5fd"}
+        color={isRaining ? "#38bdf8" : isNight ? "#1e1b4b" : "#93c5fd"}
       />
+
+      {/* Twinkling Night Stars */}
+      {isNight && (
+        <points>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              count={starPositions.length / 3}
+              array={starPositions}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <pointsMaterial
+            size={0.14}
+            color="#ffffff"
+            transparent
+            opacity={0.85}
+            depthWrite={false}
+          />
+        </points>
+      )}
 
       {/* Floating Volumetric Cloud Formations */}
       <group ref={cloudsRef} position={[-2, 6.2, -1]}>
@@ -204,9 +243,9 @@ export function SkyAndAtmosphere({
           <mesh key={i} position={c.pos} scale={c.s}>
             <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial
-              color={isRaining ? "#334155" : isDrought ? "#fdba74" : "#ffffff"}
+              color={isRaining ? "#334155" : isDrought ? "#fdba74" : isNight ? "#1e293b" : "#ffffff"}
               transparent
-              opacity={isRaining ? 0.92 : 0.75}
+              opacity={isRaining ? 0.92 : isNight ? 0.6 : 0.75}
               roughness={0.9}
             />
           </mesh>
@@ -235,7 +274,7 @@ export function SkyAndAtmosphere({
       )}
 
       {/* Circling Crows High Above Dead Banyan */}
-      {!isRaining && (
+      {!isRaining && !isNight && (
         <group ref={crowsGroupRef} position={[-4.5, 5.2, -4.5]}>
           {[
             { radius: 2.2, angle: 0, height: 0 },
@@ -261,7 +300,7 @@ export function SkyAndAtmosphere({
       )}
 
       {/* Dust motes (warm amber motes or drought dust storm) */}
-      {dustPositions && (
+      {!isNight && dustPositions && (
         <points ref={dustRef}>
           <bufferGeometry>
             <bufferAttribute
