@@ -263,7 +263,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tab switcher for small screens */}
+        {/* Tab switcher for view filtering */}
         <div className="mobile-tabs-bar">
           <button
             className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
@@ -272,10 +272,10 @@ export default function App() {
             All Panels
           </button>
           <button
-            className={`tab-btn ${activeTab === "chat" ? "active" : ""}`}
-            onClick={() => setActiveTab("chat")}
+            className={`tab-btn ${activeTab === "world" ? "active" : ""}`}
+            onClick={() => setActiveTab("world")}
           >
-            Chat
+            3D World
           </button>
           <button
             className={`tab-btn ${activeTab === "farm" ? "active" : ""}`}
@@ -292,14 +292,6 @@ export default function App() {
         </div>
 
         <div className="nav-controls-section">
-          <button
-            className={`nav-ctrl-btn ${show3D ? "btn-active-3d" : ""}`}
-            onClick={() => setShow3D(!show3D)}
-            title="Toggle 3D View"
-          >
-            <Box size={16} />
-            <span>{show3D ? "Close 3D" : "3D Farm View"}</span>
-          </button>
 
           <button
             className="nav-ctrl-btn"
@@ -321,60 +313,49 @@ export default function App() {
         </div>
       </header>
 
-      {/* Optional 3D Farm Canvas Viewer */}
-      {show3D && (
-        <div className="three-d-modal-wrapper">
-          <div className="three-d-header">
-            <h4>🌿 3D Farm Environment Inspection</h4>
-            <button className="close-3d-btn" onClick={() => setShow3D(false)}>
-              <X size={18} />
-            </button>
-          </div>
-          <div className="three-d-canvas-box">
-            <Suspense fallback={<div className="three-loading">Rendering 3D fields...</div>}>
-              <FarmScene
-                trust={npcState?.npc?.trust ?? 0}
-                mood={npcState?.npc?.mood || "neutral"}
-                weather={npcState?.weather || "clear"}
-                day={npcState?.day ?? 1}
-                time={npcState?.time ?? 8}
-                plots={npcState?.plots || []}
-                quests={npcState?.quests || []}
-                inventory={npcState?.inventory || {}}
-                flags={npcState?.flags || {}}
-                isSpeaking={isThinking}
-                latestRaghuMessage={
-                  [...messages].reverse().find((m) => m.role === "raghu")?.text || ""
-                }
-                isThinking={isThinking}
-                onSendMessage={handleSendMessage}
-                voiceEnabled={voiceEnabled}
-                onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
-                onInspectHotspot={(id) => {
-                  showToast(`Inspected 3D Hotspot: ${id}`, "info");
-                }}
-              />
-            </Suspense>
-          </div>
-        </div>
-      )}
-
-      {/* Main 3-Column Dashboard */}
+      {/* Main 3-Column Dashboard with 3D World as Primary Center/Left Hub */}
       <main className="npc-main-dashboard">
-        {/* Panel 1: Chat Panel */}
+        {/* Panel 1: 3D Interactive World with Raghu */}
         <section
-          className={`dashboard-column col-chat ${
-            activeTab === "all" || activeTab === "chat" ? "col-visible" : "col-hidden"
+          className={`dashboard-column col-world ${
+            activeTab === "all" || activeTab === "world" ? "col-visible" : "col-hidden"
           }`}
         >
-          <ChatPanel
-            npcState={npcState}
-            messages={messages}
-            isThinking={isThinking}
-            onSendMessage={handleSendMessage}
-            voiceEnabled={voiceEnabled}
-            onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
-          />
+          <div className="world-3d-panel-container">
+            <div className="world-3d-panel-header">
+              <div className="world-header-title">
+                <Box size={16} />
+                <h4>🌿 Bhima's Hollow (3D World)</h4>
+              </div>
+              <span className="world-header-hint">
+                Click landmarks to inspect · Drag to orbit · Talk to Raghu in-world
+              </span>
+            </div>
+            <div className="world-3d-canvas-wrapper">
+              <Suspense fallback={<div className="three-loading">Rendering 3D farm diorama...</div>}>
+                <FarmScene
+                  trust={npcState?.npc?.trust ?? 0}
+                  mood={npcState?.npc?.mood || "neutral"}
+                  weather={npcState?.weather || "clear"}
+                  day={npcState?.day ?? 1}
+                  time={npcState?.time ?? 8}
+                  plots={npcState?.plots || []}
+                  quests={npcState?.quests || []}
+                  inventory={npcState?.inventory || {}}
+                  flags={npcState?.flags || {}}
+                  isSpeaking={isThinking}
+                  messages={messages}
+                  isThinking={isThinking}
+                  onSendMessage={handleSendMessage}
+                  voiceEnabled={voiceEnabled}
+                  onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
+                  onInspectHotspot={(id) => {
+                    showToast(`Inspected 3D Hotspot: ${id}`, "info");
+                  }}
+                />
+              </Suspense>
+            </div>
+          </div>
         </section>
 
         {/* Panel 2: Farm Panel */}

@@ -3196,10 +3196,10 @@
 .npc-main-dashboard {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1.3fr 1fr;
+  grid-template-columns: 1.4fr 1.2fr 1fr;
   gap: 20px;
   padding: 24px;
-  max-width: 1780px;
+  max-width: 1820px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -3209,6 +3209,56 @@
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 120px);
+}
+
+/* ==========================================================================
+   PANEL 1: 3D WORLD INTERACTIVE PANEL
+   ========================================================================== */
+.world-3d-panel-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.world-3d-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 18px;
+  background: rgba(10, 14, 20, 0.75);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.world-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #34d399;
+}
+
+.world-header-title h4 {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.world-header-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.world-3d-canvas-wrapper {
+  flex: 1;
+  width: 100%;
+  min-height: 480px;
+  position: relative;
 }
 
 /* ==========================================================================
@@ -4738,5 +4788,103 @@
   background: rgba(245, 158, 11, 0.25);
   border-color: #f59e0b;
   color: #fff;
+}
+
+/* 3D Bubble Header Tools */
+.header-left-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-right-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.raghu-3d-tool-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  transition: all 0.2s;
+}
+
+.raghu-3d-tool-btn:hover {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+}
+
+.raghu-3d-tool-btn.active {
+  background: #f59e0b;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* 3D In-World Speech-to-Text Mic Button */
+.raghu-3d-mic-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.raghu-3d-mic-btn:hover {
+  color: #fbbf24;
+}
+
+.raghu-3d-mic-btn.is-listening {
+  color: #ef4444;
+  animation: pulseMic 1s infinite alternate;
+}
+
+@keyframes pulseMic {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.2); }
+}
+
+/* Collapsible 3D Conversation History Stream */
+.raghu-3d-history-stream {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  max-height: 140px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.72rem;
+}
+
+.history-row {
+  display: flex;
+  gap: 5px;
+  line-height: 1.35;
+}
+
+.history-sender {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.row-player .history-sender { color: #60a5fa; }
+.row-raghu .history-sender  { color: #fbbf24; }
+
+.history-text {
+  color: #cbd5e1;
 }
 

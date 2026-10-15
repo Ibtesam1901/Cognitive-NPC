@@ -37,7 +37,7 @@ export default function FarmScene({
   inventory = {},
   flags = {},
   isSpeaking = false,
-  latestRaghuMessage = "",
+  messages = [],
   isThinking = false,
   onSendMessage,
   voiceEnabled = true,
@@ -132,7 +132,7 @@ export default function FarmScene({
               mood={mood}
               isSpeaking={isSpeaking}
               reducedMotion={reducedMotion}
-              latestRaghuMessage={latestRaghuMessage}
+              messages={messages}
               isThinking={isThinking}
               onSendMessage={onSendMessage}
               voiceEnabled={voiceEnabled}

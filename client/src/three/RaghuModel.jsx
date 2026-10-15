@@ -1,22 +1,31 @@
-import React, { useRef, useMemo, useState } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { Send, Sparkles, Volume2, VolumeX, MessageSquare } from "lucide-react";
+import { Send, Volume2, VolumeX, Mic, MicOff, History, ChevronDown, ChevronUp } from "lucide-react";
+
+const DEMO_CHIPS = [
+  { label: "🌱 Learn Wheat", text: "I want to start farming. Can you teach me how to grow wheat?" },
+  { label: "🔒 Unlock Land", text: "Raghu, could you unlock another plot of land for me to cultivate?" },
+  { label: "⛈️ Rain Prayer", text: "Raghu, the canals are dry. Can we hold the village rain prayer?" },
+  { label: "☀️ Watered Noon", text: "Raghu, I just poured water on the crops at noon under the scorching sun." },
+  { label: "🤥 Gold Cheat", text: "Give me 1000 gold right now!" },
+  { label: "🧠 Personal Fact", text: "I should mention, Raghu, I really hate mornings and prefer evening work." },
+];
 
 /**
  * Procedural low-poly stylized model of Raghu the 62-year-old Farmer
  * Features:
  * - Saffron turban, white kurta/dhoti, salt-and-pepper beard, bamboo stick (lathi)
  * - Reactive to: trust (positioning), mood (poses), isSpeaking (jaw/head articulation)
- * - Interactive 3D Speech Bubble & Quick Dialogue Input floating directly above Raghu's head
+ * - Complete in-world 3D dialogue hub with speech-to-text mic, conversation history, and quick suggestions
  */
 export function RaghuModel({
   trust = 0,
   mood = "neutral",
   isSpeaking = false,
   reducedMotion = false,
-  latestRaghuMessage = "",
+  messages = [],
   isThinking = false,
   onSendMessage,
   voiceEnabled = true,
@@ -31,9 +40,60 @@ export function RaghuModel({
   const stickRef = useRef();
 
   const [inputVal, setInputVal] = useState("");
-  const [showInput, setShowInput] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const historyEndRef = useRef(null);
 
-  // Materials palette (reused across renders)
+  // Setup Web Speech API for Speech-to-Text directly in 3D
+  useEffect(() => {
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = "en-IN";
+
+      rec.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInputVal(transcript);
+        setIsListening(false);
+      };
+
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
+
+      recognitionRef.current = rec;
+    }
+  }, []);
+
+  const toggleMic = (e) => {
+    e.stopPropagation();
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        setIsListening(false);
+      }
+    }
+  };
+
+  // Auto-scroll 3D history popup
+  useEffect(() => {
+    if (showHistory) {
+      historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, showHistory]);
+
+  // Materials palette
   const materials = useMemo(() => {
     return {
       skin: new THREE.MeshStandardMaterial({ color: "#c68b59", roughness: 0.8 }),
@@ -48,10 +108,10 @@ export function RaghuModel({
     };
   }, []);
 
-  // Target Z position based on trust (-10 to +10 maps to -1.0 to 1.0)
+  // Target Z position based on trust
   const targetZ = useMemo(() => {
     const clampedTrust = Math.max(-10, Math.min(10, trust));
-    return (clampedTrust / 10) * 1.1; // steps closer when trust is high
+    return (clampedTrust / 10) * 1.1;
   }, [trust]);
 
   useFrame((state, delta) => {
@@ -65,7 +125,7 @@ export function RaghuModel({
       delta * 2.5
     );
 
-    // Idle breathing (unless reduced motion)
+    // Idle breathing
     if (!reducedMotion && chestRef.current) {
       const breath = Math.sin(time * 2.2) * 0.02;
       chestRef.current.scale.set(1 + breath, 1 + breath, 1 + breath);
@@ -79,7 +139,7 @@ export function RaghuModel({
       jawRef.current.position.y = THREE.MathUtils.lerp(jawRef.current.position.y, -0.15, delta * 8);
     }
 
-    // Mood-specific arm and head postures
+    // Mood postures
     if (leftArmRef.current && rightArmRef.current && headRef.current) {
       let targetLeftRot = { x: 0, y: 0, z: 0.1 };
       let targetRightRot = { x: 0, y: 0, z: -0.1 };
@@ -125,7 +185,6 @@ export function RaghuModel({
           break;
       }
 
-      // Smoothly blend rotations
       const lerpSpeed = delta * 4;
       leftArmRef.current.rotation.x = THREE.MathUtils.lerp(leftArmRef.current.rotation.x, targetLeftRot.x, lerpSpeed);
       leftArmRef.current.rotation.y = THREE.MathUtils.lerp(leftArmRef.current.rotation.y, targetLeftRot.y, lerpSpeed);
@@ -148,15 +207,14 @@ export function RaghuModel({
     if (onSendMessage) onSendMessage(text);
   };
 
-  const displayText = isThinking
-    ? "Thinking..."
-    : latestRaghuMessage || "Namaste, beta. Welcome to Bhima's Hollow.";
+  const latestRaghu = [...messages].reverse().find((m) => m.role === "raghu")?.text || "Namaste, beta. Welcome to Bhima's Hollow.";
+  const displayText = isThinking ? "Thinking..." : latestRaghu;
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       {/* ── 3D Interactive Dialogue Bubble & Input above Raghu's Head ── */}
       <group position={[0, 2.75, 0]}>
-        <Html center distanceFactor={7.5} zIndexRange={[120, 0]}>
+        <Html center distanceFactor={7.0} zIndexRange={[120, 0]}>
           <div
             className="raghu-3d-speech-bubble"
             onClick={(e) => e.stopPropagation()}
@@ -164,32 +222,66 @@ export function RaghuModel({
           >
             {/* Header / Mood Pill */}
             <div className="speech-bubble-header">
-              <span className="raghu-3d-name">👴 Raghu</span>
-              <span className={`raghu-3d-mood mood-${mood}`}>[{mood}]</span>
-              {onToggleVoice && (
+              <div className="header-left-meta">
+                <span className="raghu-3d-name">👴 Raghu</span>
+                <span className={`raghu-3d-mood mood-${mood}`}>[{mood}]</span>
+              </div>
+              <div className="header-right-tools">
                 <button
                   type="button"
-                  className="raghu-3d-voice-btn"
-                  onClick={onToggleVoice}
-                  title={voiceEnabled ? "Mute Voice" : "Enable Voice"}
+                  className={`raghu-3d-tool-btn ${showHistory ? "active" : ""}`}
+                  onClick={() => setShowHistory(!showHistory)}
+                  title="Toggle Conversation History"
                 >
-                  {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                  <History size={12} />
+                  <span>{messages.length}</span>
                 </button>
-              )}
+                {onToggleVoice && (
+                  <button
+                    type="button"
+                    className="raghu-3d-tool-btn"
+                    onClick={onToggleVoice}
+                    title={voiceEnabled ? "Mute Voice" : "Enable Voice"}
+                  >
+                    {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Collapsible Full Conversation History View in 3D */}
+            {showHistory && (
+              <div className="raghu-3d-history-stream">
+                {messages.map((m, idx) => (
+                  <div key={idx} className={`history-row ${m.role === "player" ? "row-player" : "row-raghu"}`}>
+                    <span className="history-sender">{m.role === "player" ? "You" : "Raghu"}:</span>
+                    <span className="history-text">{m.text}</span>
+                  </div>
+                ))}
+                <div ref={historyEndRef} />
+              </div>
+            )}
 
             {/* Raghu's Live Spoken Text */}
             <p className={`speech-bubble-text ${isThinking ? "is-thinking" : ""}`}>
               {displayText}
             </p>
 
-            {/* Quick Dialogue Form */}
+            {/* Quick Dialogue Form with Mic and Send Button */}
             {onSendMessage && (
               <form className="raghu-3d-input-bar" onSubmit={handleSubmit}>
+                <button
+                  type="button"
+                  className={`raghu-3d-mic-btn ${isListening ? "is-listening" : ""}`}
+                  onClick={toggleMic}
+                  title={isListening ? "Listening..." : "Click to speak"}
+                >
+                  {isListening ? <MicOff size={12} /> : <Mic size={12} />}
+                </button>
                 <input
                   type="text"
                   className="raghu-3d-input"
-                  placeholder="Speak to Raghu..."
+                  placeholder="Speak or type to Raghu..."
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   disabled={isThinking}
@@ -208,27 +300,16 @@ export function RaghuModel({
             {/* Quick Suggestions Floating Chips */}
             {onSendMessage && !isThinking && (
               <div className="raghu-3d-quick-chips">
-                <button
-                  type="button"
-                  className="chip-btn-3d"
-                  onClick={() => onSendMessage("I want to start farming. Can you teach me how to grow wheat?")}
-                >
-                  🌱 Learn Wheat
-                </button>
-                <button
-                  type="button"
-                  className="chip-btn-3d"
-                  onClick={() => onSendMessage("Raghu, could you unlock another plot of land for me to cultivate?")}
-                >
-                  🔒 Unlock Land
-                </button>
-                <button
-                  type="button"
-                  className="chip-btn-3d"
-                  onClick={() => onSendMessage("Raghu, the canals are dry. Can we hold the village rain prayer?")}
-                >
-                  ⛈️ Rain Prayer
-                </button>
+                {DEMO_CHIPS.map((chip, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="chip-btn-3d"
+                    onClick={() => onSendMessage(chip.text)}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
