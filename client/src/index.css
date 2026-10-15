@@ -5,24 +5,50 @@
 }
 
 :root {
-  --font-main: 'Outfit', system-ui, -apple-system, sans-serif;
-  --font-display: 'Cinzel', serif;
+  --font-main: 'Plus Jakarta Sans', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
   
-  --bg-dark: #0d0f12;
-  --panel-bg: rgba(22, 27, 34, 0.78);
-  --panel-border: rgba(255, 255, 255, 0.08);
-  --panel-border-glow: rgba(217, 119, 6, 0.25);
+  /* Minimal Obsidian & Deep Slate Palette */
+  --bg-dark: #090b0e;
+  --bg-canvas: #0c0e12;
+  --panel-bg: rgba(14, 18, 23, 0.72);
+  --panel-bg-solid: #0e1217;
+  --panel-bg-elevated: rgba(22, 28, 36, 0.85);
+  --panel-border: rgba(255, 255, 255, 0.07);
+  --panel-border-subtle: rgba(255, 255, 255, 0.04);
+  --panel-border-hover: rgba(255, 255, 255, 0.14);
+  --panel-border-glow: rgba(245, 158, 11, 0.15);
   
-  --accent-amber: #d97706;
-  --accent-amber-light: #f59e0b;
+  /* Curated Minimal Accent Tones */
+  --accent-amber: #f59e0b;
+  --accent-amber-light: #fbbf24;
+  --accent-amber-subtle: rgba(245, 158, 11, 0.1);
+  --accent-gold: #f59e0b;
+  --accent-emerald: #10b981;
   --accent-green: #10b981;
   --accent-green-dark: #059669;
-  --accent-red: #ef4444;
-  --accent-blue: #3b82f6;
+  --accent-green-subtle: rgba(16, 185, 129, 0.1);
+  --accent-red: #f43f5e;
+  --accent-blue: #38bdf8;
+  --accent-indigo: #6366f1;
 
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  /* Refined High-Contrast Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-faint: #475569;
+
+  /* Minimal Component Tokens */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
 
   color-scheme: dark;
 }
