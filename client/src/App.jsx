@@ -12,6 +12,18 @@ import {
   Box,
   Sun,
   Moon,
+  Coins,
+  Clock,
+  Heart,
+  CloudRain,
+  Flame,
+  Cloud,
+  Compass,
+  Scroll,
+  Sprout,
+  Maximize2,
+  Minimize2,
+  ArrowRight,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { sound } from "./utils/sound.js";
@@ -49,6 +61,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [show3D, setShow3D] = useState(false);
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'chat' | 'farm' | 'journal'
+  const [activeGameDrawer, setActiveGameDrawer] = useState("none"); // 'none' | 'farm' | 'journal'
   const [toast, setToast] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem("raghu_theme") || "light");
 
@@ -261,147 +274,208 @@ export default function App() {
     showToast("LLM brain settings saved!", "success");
   };
 
+  // Game HUD metadata
+  const weather = (npcState?.weather || "clear").toLowerCase();
+  const day = npcState?.day ?? 1;
+  const time = npcState?.time ?? 8;
+  const gold = npcState?.gold ?? 100;
+  const trust = npcState?.npc?.trust ?? 0;
+  const activePlotsCount = (npcState?.plots || []).filter((p) => !p.locked).length;
+  const activeQuestsCount = (npcState?.quests || []).filter((q) => !q.completed).length;
+
   return (
-    <div className="npc-app-container">
-      {/* Top Banner Navigation */}
-      <header className="npc-top-nav">
-        <div className="nav-brand-section">
-          <span className="brand-icon">🌾</span>
-          <div>
-            <h1 className="brand-title">Cognitive NPC: Raghu Who Shapes the Farm</h1>
-            <p className="brand-subtitle">
-              The LLM proposes actions, the game engine decides and verifies.
-            </p>
+    <div className="npc-game-viewport">
+      {/* ── RPG Game Top HUD Bar ── */}
+      <header className="game-hud-topbar">
+        {/* Left: Brand & Location */}
+        <div className="game-hud-brand">
+          <span className="game-brand-crest">🌾</span>
+          <div className="game-brand-text">
+            <span className="game-brand-title">Bhima's Hollow</span>
+            <span className="game-brand-sub">Cognitive NPC · Raghu</span>
           </div>
         </div>
 
-        {/* Tab switcher for view filtering */}
-        <div className="mobile-tabs-bar">
+        {/* Center: Live Game Status Pills */}
+        <div className="game-status-cluster">
+          {/* Day & Time */}
+          <div className="game-hud-pill pill-time" title="Current Day and Hour">
+            <Clock size={15} className="pill-icon text-amber" />
+            <span className="pill-value">Day {day} · {time}:00</span>
+          </div>
+
+          {/* Weather */}
+          <div className={`game-hud-pill pill-weather weather-${weather}`} title={`Weather: ${weather}`}>
+            {weather === "rain" ? (
+              <CloudRain size={15} className="pill-icon text-blue" />
+            ) : weather === "drought" ? (
+              <Flame size={15} className="pill-icon text-red" />
+            ) : weather === "overcast" ? (
+              <Cloud size={15} className="pill-icon text-slate" />
+            ) : (
+              <Sun size={15} className="pill-icon text-amber" />
+            )}
+            <span className="pill-value capitalize">{weather}</span>
+          </div>
+
+          {/* Gold Treasury */}
+          <div className="game-hud-pill pill-gold" title="Village Gold">
+            <Coins size={15} className="pill-icon text-gold" />
+            <span className="pill-value">{gold} <small>Gold</small></span>
+          </div>
+
+          {/* Raghu's Trust */}
+          <div className="game-hud-pill pill-trust" title={`Raghu's Trust: ${trust}`}>
+            <Heart size={15} className="pill-icon text-emerald" />
+            <span className="pill-value">
+              {trust >= 0 ? `+${trust}` : trust} <small>Trust</small>
+            </span>
+          </div>
+
+          {/* Next Morning Action */}
           <button
-            className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
-            onClick={() => setActiveTab("all")}
+            className="game-hud-action-btn btn-advance-morning"
+            onClick={() => handleFarmAction("NEXT_DAY")}
+            disabled={isActing}
+            title="Advance to next morning (crops grow, weather rolls)"
           >
-            All Panels
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "world" ? "active" : ""}`}
-            onClick={() => setActiveTab("world")}
-          >
-            3D World
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "farm" ? "active" : ""}`}
-            onClick={() => setActiveTab("farm")}
-          >
-            Farm
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "journal" ? "active" : ""}`}
-            onClick={() => setActiveTab("journal")}
-          >
-            Journal
+            <span>Next Day</span>
+            <ArrowRight size={14} />
           </button>
         </div>
 
-        <div className="nav-controls-section">
+        {/* Right: Quick Controls & Theme */}
+        <div className="game-hud-right-controls">
+          {/* View Mode Switcher */}
+          <div className="game-mode-toggle">
+            <button
+              className={`game-nav-tab ${activeTab === "all" ? "active" : ""}`}
+              onClick={() => setActiveTab("all")}
+              title="Split View (All Panels)"
+            >
+              <Layers size={14} />
+              <span>Dashboard</span>
+            </button>
+            <button
+              className={`game-nav-tab ${activeTab === "world" ? "active" : ""}`}
+              onClick={() => setActiveTab("world")}
+              title="Fullscreen 3D World"
+            >
+              <Compass size={14} />
+              <span>3D World</span>
+            </button>
+            <button
+              className={`game-nav-tab ${activeTab === "farm" ? "active" : ""}`}
+              onClick={() => setActiveTab("farm")}
+              title="Farm & Fields Only"
+            >
+              <Sprout size={14} />
+              <span>Farm ({activePlotsCount})</span>
+            </button>
+            <button
+              className={`game-nav-tab ${activeTab === "journal" ? "active" : ""}`}
+              onClick={() => setActiveTab("journal")}
+              title="Journal & Memory Only"
+            >
+              <Scroll size={14} />
+              <span>Journal ({activeQuestsCount})</span>
+            </button>
+          </div>
+
+          {/* Theme & Settings */}
           <button
-            className="nav-ctrl-btn"
+            className="game-icon-btn"
             onClick={toggleTheme}
             title={theme === "light" ? "Switch to Dark Theme" : "Switch to Light Minimal Theme"}
           >
             {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
-            <span>{theme === "light" ? "Dark" : "Light"}</span>
           </button>
 
           <button
-            className="nav-ctrl-btn"
+            className="game-icon-btn"
             onClick={handleReset}
-            title="Reset Session"
+            title="Reset Game State"
           >
-            <RotateCcw size={16} />
-            <span>Reset</span>
+            <RotateCcw size={15} />
           </button>
 
           <button
-            className="nav-ctrl-btn"
+            className="game-icon-btn"
             onClick={() => setShowSettings(true)}
-            title="Settings"
+            title="LLM Brain Settings"
           >
-            <Settings size={16} />
-            <span>LLM Brain</span>
+            <Settings size={15} />
           </button>
         </div>
       </header>
 
-      {/* Main 3-Column Dashboard with 3D World as Primary Center/Left Hub */}
-      <main className="npc-main-dashboard">
-        {/* Panel 1: 3D Interactive World with Raghu */}
+      {/* ── Main Game World & RPG Side Panels ── */}
+      <main className={`game-stage-container mode-${activeTab}`}>
+        {/* Central 3D Canvas Stage */}
         <section
-          className={`dashboard-column col-world ${
-            activeTab === "all" || activeTab === "world" ? "col-visible" : "col-hidden"
+          className={`game-world-stage ${
+            activeTab === "all" || activeTab === "world" ? "stage-visible" : "stage-hidden"
           }`}
         >
-          <div className="world-3d-panel-container">
-            <div className="world-3d-panel-header">
-              <div className="world-header-title">
-                <Box size={16} />
-                <h4>🌿 Bhima's Hollow (3D World)</h4>
-              </div>
-              <span className="world-header-hint">
-                Click landmarks to inspect · Drag to orbit · Talk to Raghu in-world
-              </span>
+          <div className="game-world-inner">
+            <div className="game-world-watermark">
+              <span className="watermark-badge">3D LIVING DIORAMA</span>
+              <span className="watermark-tip">Orbit · Inspect Landmarks · Speak with Raghu</span>
             </div>
-            <div className="world-3d-canvas-wrapper">
-              <Suspense fallback={<div className="three-loading">Rendering 3D farm diorama...</div>}>
-                <FarmScene
-                  trust={npcState?.npc?.trust ?? 0}
-                  mood={npcState?.npc?.mood || "neutral"}
-                  weather={npcState?.weather || "clear"}
-                  day={npcState?.day ?? 1}
-                  time={npcState?.time ?? 8}
-                  plots={npcState?.plots || []}
-                  quests={npcState?.quests || []}
-                  inventory={npcState?.inventory || {}}
-                  flags={npcState?.flags || {}}
-                  isSpeaking={isThinking}
-                  messages={messages}
-                  isThinking={isThinking}
-                  onSendMessage={handleSendMessage}
-                  voiceEnabled={voiceEnabled}
-                  onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
-                  onInspectHotspot={(id) => {
-                    showToast(`Inspected 3D Hotspot: ${id}`, "info");
-                  }}
-                />
-              </Suspense>
-            </div>
+
+            <Suspense fallback={<div className="three-loading">Loading Bhima's Hollow world...</div>}>
+              <FarmScene
+                trust={npcState?.npc?.trust ?? 0}
+                mood={npcState?.npc?.mood || "neutral"}
+                weather={npcState?.weather || "clear"}
+                day={npcState?.day ?? 1}
+                time={npcState?.time ?? 8}
+                plots={npcState?.plots || []}
+                quests={npcState?.quests || []}
+                inventory={npcState?.inventory || {}}
+                flags={npcState?.flags || {}}
+                isSpeaking={isThinking}
+                messages={messages}
+                isThinking={isThinking}
+                onSendMessage={handleSendMessage}
+                voiceEnabled={voiceEnabled}
+                onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
+                onInspectHotspot={(id) => {
+                  showToast(`Inspected 3D Hotspot: ${id}`, "info");
+                }}
+              />
+            </Suspense>
           </div>
         </section>
 
-        {/* Panel 2: Farm Panel */}
-        <section
-          className={`dashboard-column col-farm ${
-            activeTab === "all" || activeTab === "farm" ? "col-visible" : "col-hidden"
+        {/* RPG Side Column 1: Cultivation Farm Panel */}
+        <aside
+          className={`game-side-panel panel-farm ${
+            activeTab === "all" || activeTab === "farm" ? "panel-visible" : "panel-hidden"
           }`}
         >
-          <FarmPanel
-            farmState={npcState}
-            onFarmAction={handleFarmAction}
-            isActing={isActing}
-          />
-        </section>
+          <div className="game-panel-frame">
+            <FarmPanel
+              farmState={npcState}
+              onFarmAction={handleFarmAction}
+              isActing={isActing}
+            />
+          </div>
+        </aside>
 
-        {/* Panel 3: Journal & Objectives Panel */}
-        <section
-          className={`dashboard-column col-journal ${
-            activeTab === "all" || activeTab === "journal" ? "col-visible" : "col-hidden"
+        {/* RPG Side Column 2: Memory & Objectives Journal */}
+        <aside
+          className={`game-side-panel panel-journal ${
+            activeTab === "all" || activeTab === "journal" ? "panel-visible" : "panel-hidden"
           }`}
         >
-          <JournalPanel
-            npcState={npcState}
-            actionLog={actionLog}
-          />
-        </section>
+          <div className="game-panel-frame">
+            <JournalPanel
+              npcState={npcState}
+              actionLog={actionLog}
+            />
+          </div>
+        </aside>
       </main>
 
       {/* Toast Notification */}
