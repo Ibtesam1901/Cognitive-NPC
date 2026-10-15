@@ -14,6 +14,7 @@ import { VoxelTree } from "./VoxelTree.jsx";
 import { WebGLBoundary } from "./WebGLBoundary.jsx";
 import { ThreeLoadingScreen } from "./ThreeLoadingScreen.jsx";
 import { PlayerController } from "./PlayerController.jsx";
+import { Collectibles } from "./Collectibles.jsx";
 import { usePrefersReducedMotion } from "../utils/motion.js";
 
 /**
@@ -55,9 +56,11 @@ export default function FarmScene({
   onPlayerMove,
   onFootstep,
   onPlotClick,
+  onCollectItem,
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const [isTabVisible, setIsTabVisible] = useState(true);
+  const [playerCoords, setPlayerCoords] = useState({ x: -0.5, z: 4.0 });
 
   // Pause rendering when tab is hidden to conserve laptop battery
   useEffect(() => {
@@ -263,10 +266,20 @@ export default function FarmScene({
               onMapClick={onMapClick}
             />
 
+            {/* 5 Scattered Village Collectibles & Hidden Cache */}
+            <Collectibles
+              foundList={flags.found_collectibles || []}
+              onCollect={onCollectItem}
+              playerPos={playerCoords}
+            />
+
             {/* 3rd-Person WASD Player Controller with Collision & Camera Tracking */}
             <PlayerController
               initialPosition={[-0.5, 0, 4.0]}
-              onPositionChange={onPlayerMove}
+              onPositionChange={(x, z) => {
+                setPlayerCoords({ x, z });
+                if (onPlayerMove) onPlayerMove(x, z);
+              }}
               onProximityToRaghu={(isNear) => setIsNearRaghu(isNear)}
               onFootstep={onFootstep}
               enabled={true}

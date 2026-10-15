@@ -4643,6 +4643,99 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* ── Folklore Story Modal Card ── */
+.story-modal-card {
+  background: var(--panel-bg-elevated);
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 560px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg), 0 0 24px rgba(245, 158, 11, 0.15);
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.story-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--panel-border);
+  background: var(--accent-amber-subtle);
+}
+
+.story-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.story-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.story-title-row h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+}
+
+.story-subtitle {
+  font-size: 0.72rem;
+  color: var(--accent-amber);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.story-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.story-prose {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.story-prose p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.story-lore-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel-bg-solid);
+  border: 1px solid var(--panel-border);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.story-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  background: var(--panel-bg);
+  border-top: 1px solid var(--panel-border);
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;

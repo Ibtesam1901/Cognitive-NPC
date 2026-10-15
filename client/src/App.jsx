@@ -31,6 +31,7 @@ import { playVoice, stopVoice } from "./utils/voice.js";
 import { ChatPanel } from "./components/ChatPanel.jsx";
 import { FarmPanel } from "./components/FarmPanel.jsx";
 import { JournalPanel } from "./components/JournalPanel.jsx";
+import { StoryModal } from "./components/StoryModal.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import { audioManager } from "./utils/audioManager.js";
 import "./App.css";
@@ -64,6 +65,7 @@ export default function App() {
   const [show3D, setShow3D] = useState(false);
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'chat' | 'farm' | 'journal'
   const [activeGameDrawer, setActiveGameDrawer] = useState("none"); // 'none' | 'farm' | 'journal'
+  const [activeStory, setActiveStory] = useState(null);
   const [toast, setToast] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem("raghu_theme") || "light");
 
@@ -398,6 +400,14 @@ export default function App() {
             </span>
           </div>
 
+          {/* Collectibles Found */}
+          <div className="game-hud-pill pill-collectibles" title="Village Collectibles Discovered">
+            <Sparkles size={15} className="pill-icon text-amber" />
+            <span className="pill-value">
+              {(npcState?.flags?.found_collectibles || []).length} / 5 <small>Relics</small>
+            </span>
+          </div>
+
           {/* Next Morning Action */}
           <button
             className="game-hud-action-btn btn-advance-morning"
@@ -521,6 +531,68 @@ export default function App() {
                 onInspectHotspot={(id) => {
                   showToast(`Inspected 3D Hotspot: ${id}`, "info");
                 }}
+                onWellClick={() => {
+                  const now = Date.now();
+                  const lastDraw = npcState?.flags?.last_well_draw_time || 0;
+                  // 12 second cooldown on the well
+                  if (now - lastDraw < 12000) {
+                    const remainingSec = Math.ceil((12000 - (now - lastDraw)) / 1000);
+                    showToast(`The well bucket is resting deep in the spring. Wait ${remainingSec}s...`, "info");
+                    return;
+                  }
+
+                  // Refill water can and play splash
+                  audioManager.playWaterDraw();
+                  setNpcState((prev) => ({
+                    ...prev,
+                    inventory: {
+                      ...prev.inventory,
+                      water_can: Math.max(1, (prev.inventory.water_can || 0) + 1),
+                    },
+                    flags: {
+                      ...(prev.flags || {}),
+                      last_well_draw_time: now,
+                    },
+                  }));
+                  showToast("Drew fresh cool groundwater! Watering Can refilled (+1 Can).", "success");
+                }}
+                onNorthFieldClick={() => {
+                  // Ancient Banyan Tree story
+                  setActiveStory({
+                    title: "The Legend of the Ancient Banyan",
+                    subtitle: "Folklore of Bhima's Hollow",
+                    paragraphs: [
+                      "Centuries before the drought, when Bhima's river ran thick with silver trout, an ascetic monk planted a twin-seed beneath the dry red loam.",
+                      "Legend holds that this sacred tree breathes in unison with the honest toil of those who till the valley. In seasons of deceit and neglect, its wide canopy withers to bare bark.",
+                      "Yet the elders say: should a stranger arrive with honest hands, water the thirsty earth, and restore trust with Raghu, sacred emerald leaves shall return to shade the entire valley once more.",
+                    ],
+                    loreNote: "Unlocked in your Village Journal. Raghu's trust will visually nourish the roots.",
+                  });
+                  // Mark as unlocked in flags
+                  setNpcState((prev) => ({
+                    ...prev,
+                    flags: { ...(prev.flags || {}), banyan_story_unlocked: true },
+                  }));
+                }}
+                onCollectItem={(item) => {
+                  sound.playChime();
+                  confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+                  setNpcState((prev) => {
+                    const currentList = prev?.flags?.found_collectibles || [];
+                    if (currentList.includes(item.id)) return prev;
+                    const nextList = [...currentList, item.id];
+                    const nextGold = prev.gold + (item.rewardGold || 15);
+                    return {
+                      ...prev,
+                      gold: nextGold,
+                      flags: {
+                        ...(prev.flags || {}),
+                        found_collectibles: nextList,
+                      },
+                    };
+                  });
+                  showToast(`Discovered Relic: ${item.name}! (+${item.rewardGold || 15} Gold)`, "success");
+                }}
                 onPlotClick={(plot) => {
                   if (plot.locked) {
                     showToast(`Plot #${plot.id} is locked. Speak with Raghu to gain trust & unlock it!`, "info");
@@ -611,6 +683,14 @@ export default function App() {
           config={llmConfig}
           onSave={handleSaveSettings}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Ancient Banyan Folklore Story Modal */}
+      {activeStory && (
+        <StoryModal
+          story={activeStory}
+          onClose={() => setActiveStory(null)}
         />
       )}
 
