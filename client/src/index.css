@@ -9,7 +9,51 @@
   --font-mono: 'JetBrains Mono', monospace;
   --font-display: 'Plus Jakarta Sans', sans-serif;
   
-  /* Minimal Obsidian & Deep Slate Palette */
+  /* Light Minimal Aesthetic (Default) - Crisp Porcelain & Pure Slate */
+  --bg-dark: #f8fafc;
+  --bg-canvas: #f1f5f9;
+  --panel-bg: rgba(255, 255, 255, 0.85);
+  --panel-bg-solid: #ffffff;
+  --panel-bg-elevated: #ffffff;
+  --panel-border: rgba(15, 23, 42, 0.08);
+  --panel-border-subtle: rgba(15, 23, 42, 0.05);
+  --panel-border-hover: rgba(15, 23, 42, 0.16);
+  --panel-border-glow: rgba(245, 158, 11, 0.15);
+  
+  /* Curated Warm Minimal Accent Tones */
+  --accent-amber: #d97706;
+  --accent-amber-light: #f59e0b;
+  --accent-amber-subtle: rgba(245, 158, 11, 0.08);
+  --accent-gold: #b45309;
+  --accent-emerald: #059669;
+  --accent-green: #10b981;
+  --accent-green-dark: #047857;
+  --accent-green-subtle: rgba(16, 185, 129, 0.08);
+  --accent-red: #e11d48;
+  --accent-blue: #0284c7;
+  --accent-indigo: #4f46e5;
+
+  /* Refined High-Legibility Typography for Light Minimal */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+
+  /* Minimal Component Tokens */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+  
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08);
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
   --bg-dark: #090b0e;
   --bg-canvas: #0c0e12;
   --panel-bg: rgba(14, 18, 23, 0.72);
@@ -20,7 +64,6 @@
   --panel-border-hover: rgba(255, 255, 255, 0.14);
   --panel-border-glow: rgba(245, 158, 11, 0.15);
   
-  /* Curated Minimal Accent Tones */
   --accent-amber: #f59e0b;
   --accent-amber-light: #fbbf24;
   --accent-amber-subtle: rgba(245, 158, 11, 0.1);
@@ -33,19 +76,11 @@
   --accent-blue: #38bdf8;
   --accent-indigo: #6366f1;
 
-  /* Refined High-Contrast Typography */
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --text-faint: #475569;
 
-  /* Minimal Component Tokens */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-pill: 9999px;
-  
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);

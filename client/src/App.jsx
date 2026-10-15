@@ -10,6 +10,8 @@ import {
   ShieldCheck,
   Check,
   Box,
+  Sun,
+  Moon,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { sound } from "./utils/sound.js";
@@ -48,6 +50,16 @@ export default function App() {
   const [show3D, setShow3D] = useState(false);
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'chat' | 'farm' | 'journal'
   const [toast, setToast] = useState(null);
+  const [theme, setTheme] = useState(() => localStorage.getItem("raghu_theme") || "light");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("raghu_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  };
 
   // LLM Config in localStorage
   const [llmConfig, setLlmConfig] = useState(() => {
@@ -292,6 +304,14 @@ export default function App() {
         </div>
 
         <div className="nav-controls-section">
+          <button
+            className="nav-ctrl-btn"
+            onClick={toggleTheme}
+            title={theme === "light" ? "Switch to Dark Theme" : "Switch to Light Minimal Theme"}
+          >
+            {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
+            <span>{theme === "light" ? "Dark" : "Light"}</span>
+          </button>
 
           <button
             className="nav-ctrl-btn"
