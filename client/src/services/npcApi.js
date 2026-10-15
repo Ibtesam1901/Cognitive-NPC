@@ -48,27 +48,40 @@ export async function getNpcInfo() {
  * @param {Object} params.context - Current game state (plots, time, weather, trust, inventory, player_position)
  * @param {Array} params.history - Recent chat turns
  */
-export async function chatWithNpc({ message, language = "en", context = {}, history = [] }) {
+export async function chatWithNpc({ message, text, language = "en", context = {}, history = [] }) {
+  const content = String(message || text || "").trim();
+  if (!content) {
+    throw new Error("Cannot send empty message to NPC.");
+  }
+
+  const payload = {
+    message: content,
+    text: content,
+    language: language || "en",
+    context,
+    history: Array.isArray(history) ? history : [],
+  };
+
   try {
     const res = await fetch(`${FLASK_BASE_URL}/api/npc/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        language,
-        context,
-        history,
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
-      throw new Error(errBody.error || `HTTP ${res.status}`);
+      const errorMsg = errBody.error || `Flask backend returned HTTP ${res.status}`;
+      console.warn("Flask /api/npc/chat error response:", errBody);
+      throw new Error(errorMsg);
     }
 
     return await res.json();
   } catch (err) {
-    console.error("chatWithNpc error:", err);
+    console.error("chatWithNpc network/validation error:", err);
     throw err;
   }
 }

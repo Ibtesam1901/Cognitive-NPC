@@ -153,14 +153,47 @@ def get_npc():
 # ─────────────────────────────────────────────────────────────
 @app.route("/api/npc/chat", methods=["POST"])
 def chat():
-    data = request.get_json(silent=True) or {}
-    message = str(data.get("message", "")).strip()
-    language = str(data.get("language", "en")).strip().lower()
-    if language not in ["en", "hi", "kn"]:
+    # 1. Safe JSON extraction supporting both application/json and parsed form data
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+    else:
+        data = request.form.to_dict() if request.form else (request.get_json(silent=True, force=True) or {})
+
+    # Safe diagnostic logging (showing keys received, never sensitive data or keys)
+    received_keys = list(data.keys()) if isinstance(data, dict) else []
+    logger.info(f"POST /api/npc/chat received payload with fields: {received_keys}")
+
+    # 2. Extract message with fallback for alternate field names (e.g. text, input, query, prompt)
+    raw_message = data.get("message")
+    if raw_message is None:
+        raw_message = data.get("text")
+    if raw_message is None:
+        raw_message = data.get("input")
+    if raw_message is None:
+        raw_message = data.get("query")
+    if raw_message is None:
+        raw_message = data.get("prompt")
+
+    message = str(raw_message or "").strip()
+
+    # 3. Extract and normalize language
+    raw_lang = str(data.get("language") or data.get("lang") or "en").strip().lower()
+    if raw_lang in ["kannada", "kn-in", "kn"]:
+        language = "kn"
+    elif raw_lang in ["hindi", "hi-in", "hi"]:
+        language = "hi"
+    else:
         language = "en"
 
+    # 4. Strict but descriptive validation
     if not message:
-        return jsonify({"error": "Message is required and cannot be empty"}), 400
+        logger.warning(f"Rejecting 400 Bad Request: message was empty or missing. Received fields: {received_keys}")
+        return jsonify({
+            "error": "Bad Request: 'message' or 'text' field is required and cannot be empty.",
+            "code": "MISSING_MESSAGE_FIELD",
+            "received_fields": received_keys,
+            "expected_fields": ["message (or text)", "language (optional)", "context (optional)", "history (optional)"]
+        }), 400
 
     context = data.get("context", {})
     history = data.get("history", [])

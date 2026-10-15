@@ -78,5 +78,46 @@ class TestFlaskEndpoints(unittest.TestCase):
         ]:
             self.assertIn(key, data, f"Missing key: {key}")
 
+    def test_chat_with_text_field(self):
+        # Verify that frontend requests using 'text' instead of 'message' succeed with 200
+        payload = {
+            "text": "Raghu, tell me about the village harvest.",
+            "lang": "en"
+        }
+        res = self.client.post('/api/npc/chat', json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data.get("npc_name"), "Raghu the Elder")
+        self.assertIn("reply", data)
+
+    def test_chat_multilingual_kn(self):
+        payload = {
+            "message": "ನಮಸ್ಕಾರ ರಘು, ಭೂಮಿಯ ಬಗ್ಗೆ ಹೇಳಿ",
+            "language": "kn"
+        }
+        res = self.client.post('/api/npc/chat', json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data.get("language"), "kn")
+
+    def test_chat_multilingual_hi(self):
+        payload = {
+            "text": "नमस्ते रघु जी",
+            "language": "hi"
+        }
+        res = self.client.post('/api/npc/chat', json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data.get("language"), "hi")
+
+    def test_chat_empty_400(self):
+        # Empty message should return 400 with descriptive error JSON
+        res = self.client.post('/api/npc/chat', json={"message": "   "})
+        self.assertEqual(res.status_code, 400)
+        data = res.get_json()
+        self.assertIn("error", data)
+        self.assertEqual(data.get("code"), "MISSING_MESSAGE_FIELD")
+        self.assertIn("expected_fields", data)
+
 if __name__ == '__main__':
     unittest.main()
