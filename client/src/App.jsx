@@ -33,6 +33,7 @@ import { FarmPanel } from "./components/FarmPanel.jsx";
 import { JournalPanel } from "./components/JournalPanel.jsx";
 import { StoryModal } from "./components/StoryModal.jsx";
 import { QuestTrackerHUD } from "./components/QuestTrackerHUD.jsx";
+import { TouchJoystick } from "./components/TouchJoystick.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import { audioManager } from "./utils/audioManager.js";
 import "./App.css";
@@ -97,6 +98,19 @@ export default function App() {
           model: "gemini-flash-latest",
         };
   });
+
+  // Mobile Touch Controls
+  const [joystickInput, setJoystickInput] = useState(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    const checkTouch = () => {
+      const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+      setIsTouchDevice(hasTouch);
+    };
+    checkTouch();
+    window.addEventListener("touchstart", () => setIsTouchDevice(true), { once: true });
+  }, []);
 
   const showToast = (message, type = "info") => {
     setToast({ message, type });
@@ -635,11 +649,24 @@ export default function App() {
                     audioManager.playFootstep("grass");
                   }
                 }}
+                joystickInput={joystickInput}
               />
             </Suspense>
 
             {/* In-Game Quest Tracker Overlay */}
             <QuestTrackerHUD quests={npcState?.quests} />
+
+            {/* Mobile Touch Joystick & Quick Action Button */}
+            {isTouchDevice && (
+              <TouchJoystick
+                onMove={(x, y) => setJoystickInput({ x, y })}
+                onAction={() => {
+                  // Trigger dialogue with Raghu or inspect nearest
+                  window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyE" }));
+                }}
+                actionLabel="E: Talk / Use"
+              />
+            )}
           </div>
         </section>
 

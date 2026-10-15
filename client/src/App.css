@@ -5767,5 +5767,104 @@
   }
 }
 
+/* Touch Controls Layer (Mobile Joystick & Action Button) */
+.touch-controls-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 24px;
+}
+
+.touch-joystick-base {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+  position: relative;
+  user-select: none;
+}
+
+[data-theme="dark"] .touch-joystick-base {
+  background: rgba(15, 23, 42, 0.45);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.touch-joystick-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  will-change: transform;
+}
+
+[data-theme="dark"] .touch-joystick-thumb {
+  background: #38bdf8;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4);
+}
+
+.touch-joystick-guide {
+  position: absolute;
+  bottom: -22px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary, #64748b);
+  pointer-events: none;
+}
+
+.touch-action-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.72rem;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: auto;
+  touch-action: manipulation;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  user-select: none;
+}
+
+.touch-action-btn:active {
+  transform: scale(0.92);
+}
+
+@media (max-width: 640px) {
+  .quest-tracker-hud {
+    width: 200px;
+    top: 8px;
+    right: 8px;
+    padding: 8px 10px;
+  }
+  .touch-controls-layer {
+    padding: 16px;
+  }
+}
+
+
 
 

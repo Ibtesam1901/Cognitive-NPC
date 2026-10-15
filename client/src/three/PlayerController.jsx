@@ -17,6 +17,7 @@ export function PlayerController({
   onPositionChange,
   onProximityToRaghu,
   onFootstep,
+  joystickInput = null, // { x: -1..1, y: -1..1 }
   enabled = true,
 }) {
   const playerRef = useRef();
@@ -129,7 +130,13 @@ export function PlayerController({
     if (keys.current.left) moveX -= 1;
     if (keys.current.right) moveX += 1;
 
-    const hasInput = moveX !== 0 || moveZ !== 0;
+    // Merge virtual joystick input if present
+    if (joystickInput && (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.y) > 0.05)) {
+      moveX += joystickInput.x;
+      moveZ -= joystickInput.y; // joystick y > 0 is forward
+    }
+
+    const hasInput = Math.hypot(moveX, moveZ) > 0.05;
     isMoving.current = hasInput;
 
     const baseSpeed = keys.current.sprint ? 5.8 : 3.6;

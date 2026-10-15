@@ -57,6 +57,7 @@ export default function FarmScene({
   onFootstep,
   onPlotClick,
   onCollectItem,
+  joystickInput = null,
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const [isTabVisible, setIsTabVisible] = useState(true);
@@ -282,6 +283,7 @@ export default function FarmScene({
               }}
               onProximityToRaghu={(isNear) => setIsNearRaghu(isNear)}
               onFootstep={onFootstep}
+              joystickInput={joystickInput}
               enabled={true}
             />
           </Canvas>
