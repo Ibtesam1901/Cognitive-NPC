@@ -4472,7 +4472,102 @@
 }
 
 
+/* ==========================================================================
+   NEW ENGINE UI ADDITIONS
+   ========================================================================== */
 
+/* Growth progress bar inside crop-growth-visual */
+.growth-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
 
+.growth-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
 
+/* Wheat price hint below market buttons */
+.price-hint {
+  margin-top: 6px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+}
 
+.price-up  { color: #34d399; font-weight: 600; }
+.price-down { color: #f87171; font-weight: 600; }
+
+/* Sell / Pick Flowers / Visit Shrine specific button colours */
+.sell-wheat-btn {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: var(--accent-amber) !important;
+  color: #fcd34d !important;
+}
+.sell-wheat-btn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.35) !important;
+  color: #fff !important;
+}
+
+.pick-flowers-btn {
+  background: rgba(244, 114, 182, 0.15);
+  border-color: rgba(244, 114, 182, 0.5) !important;
+  color: #f472b6 !important;
+}
+.pick-flowers-btn:hover:not(:disabled) {
+  background: rgba(244, 114, 182, 0.35) !important;
+  color: #fff !important;
+}
+
+.shrine-btn {
+  background: rgba(167, 139, 250, 0.15);
+  border-color: rgba(167, 139, 250, 0.5) !important;
+  color: #a78bfa !important;
+}
+.shrine-btn:hover:not(:disabled) {
+  background: rgba(167, 139, 250, 0.35) !important;
+  color: #fff !important;
+}
+
+/* Allow inventory row to wrap when 5 items don't fit */
+.inventory-items-row {
+  flex-wrap: wrap;
+}
+
+/* Quest current step indicator in Journal */
+.quest-current-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 0 0;
+  font-size: 0.74rem;
+  color: var(--accent-amber);
+  font-style: italic;
+}
+
+/* Trust label gradient refinements */
+.trust-numerical-value em {
+  color: var(--text-muted);
+  font-size: 0.78em;
+}
+
+/* Larger action log — show up to 8 entries */
+.action-stream-list {
+  max-height: 220px;
+}
+
+/* "✔ Applied" / "✘ Blocked" compact labels */
+.entry-status {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.entry-applied .entry-status  { color: #34d399; }
+.entry-rejected .entry-status { color: #f87171; }

@@ -129,8 +129,8 @@ export default function App() {
       const newLogs = [];
       if (Array.isArray(data.applied)) {
         for (const app of data.applied) {
-          newLogs.push({ type: "applied", message: app.message });
-          showToast(app.message, "success");
+          newLogs.push({ type: "applied", text: app.text, message: app.text });
+          showToast(app.text, "success");
           sound.playChime();
         }
       }
@@ -139,6 +139,12 @@ export default function App() {
           newLogs.push({ type: "rejected", reason: rej.reason });
           showToast(`Engine Blocked: ${rej.reason}`, "error");
           sound.playBuzzer();
+        }
+      }
+      // Quest progress events from conversation
+      if (Array.isArray(data.events)) {
+        for (const ev of data.events) {
+          showToast(ev.text, "info");
         }
       }
       if (newLogs.length > 0) {
@@ -159,8 +165,8 @@ export default function App() {
     }
   };
 
-  // 3. Handle Player Direct Farm Action (Plant, Water, Harvest, Day Advance, Buy, Sell)
-  const handleFarmAction = async (action, params = {}) => {
+  // 3. Handle Player Direct Farm Action — maps UI event names to new engine event types
+  const handleFarmAction = async (type, params = {}) => {
     if (isActing) return;
     setIsActing(true);
 
@@ -168,24 +174,31 @@ export default function App() {
       const res = await fetch(`${API}/api/npc/farm-action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, action, params }),
+        body: JSON.stringify({ sessionId, action: type, params }),
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (data.ok) {
         setNpcState(data.state);
         showToast(data.message, "success");
 
-        if (action === "HARVEST") {
+        if (type === "HARVEST") {
           confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
           sound.playChime();
-        } else if (action === "WATER") {
+        } else if (type === "WATER") {
           sound.playPop();
-        } else if (action === "ADVANCE_DAY") {
+        } else if (type === "NEXT_DAY") {
           sound.playChime();
         }
+
+        // Quest progress events
+        if (Array.isArray(data.events)) {
+          for (const ev of data.events) {
+            showToast(ev.text, "info");
+          }
+        }
       } else {
-        showToast(data.error || "Action failed", "error");
+        showToast(data.message || "Action failed", "error");
         sound.playBuzzer();
       }
     } catch (err) {
