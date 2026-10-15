@@ -54,6 +54,7 @@ export default function FarmScene({
   onMapClick,
   onPlayerMove,
   onFootstep,
+  onPlotClick,
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const [isTabVisible, setIsTabVisible] = useState(true);
@@ -200,6 +201,7 @@ export default function FarmScene({
               weather={weather}
               isPumpRunning={isPumpRunning}
               reducedMotion={reducedMotion}
+              onPlotClick={onPlotClick}
             />
 
             {/* Ancient Banyan: Sprouts lush green foliage with player trust */}

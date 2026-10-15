@@ -521,6 +521,28 @@ export default function App() {
                 onInspectHotspot={(id) => {
                   showToast(`Inspected 3D Hotspot: ${id}`, "info");
                 }}
+                onPlotClick={(plot) => {
+                  if (plot.locked) {
+                    showToast(`Plot #${plot.id} is locked. Speak with Raghu to gain trust & unlock it!`, "info");
+                    return;
+                  }
+                  if (plot.crop && plot.growth >= 2) {
+                    // Harvest ripe wheat
+                    handleFarmAction("HARVEST", { plotId: plot.id });
+                  } else if (plot.crop && !plot.watered) {
+                    // Water parched crop
+                    handleFarmAction("WATER", { plotId: plot.id });
+                  } else if (!plot.crop) {
+                    // Plant seeds
+                    if ((npcState?.inventory?.seeds ?? 0) <= 0) {
+                      showToast("No seeds left! Speak with Raghu or buy seeds in the Farm panel.", "error");
+                      return;
+                    }
+                    handleFarmAction("PLANT", { plotId: plot.id, crop: "wheat" });
+                  } else if (plot.watered) {
+                    showToast(`Plot #${plot.id} is already watered and growing!`, "info");
+                  }
+                }}
                 onFootstep={(x, z) => {
                   // Determine surface based on player coordinates
                   // Wood Verandah (around [0.2, 0, 0.5])

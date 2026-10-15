@@ -9,8 +9,9 @@ import * as THREE from "three";
  * - Wheat crops grow through blocky stages (seeds, green shoots, full golden wheat block ears)
  * - Wooden fence perimeter with oak gate
  */
-function PlotField({ plot, position, weather, reducedMotion }) {
+function PlotField({ plot, position, weather, reducedMotion, onPlotClick }) {
   const wheatGroupRef = useRef();
+  const [hovered, setHovered] = React.useState(false);
   const isRaining = weather === "rain";
   const isDrought = weather === "drought";
 
@@ -29,13 +30,14 @@ function PlotField({ plot, position, weather, reducedMotion }) {
     }
   });
 
-  // Minecraft farmland soil color
+  // Minecraft farmland soil color with hover feedback
   const soilColor = useMemo(() => {
+    if (hovered && !isLocked) return "#3b82f6"; // highlight on hover
     if (isWatered) return "#2e1a0b"; // dark wet tilled farmland
     if (isDrought) return "#a17244"; // dried out coarse dirt
     if (isLocked) return "#5c3d24";  // overgrown untilled dirt
     return "#4a2d14"; // standard tilled farmland
-  }, [isWatered, isDrought, isLocked]);
+  }, [isWatered, isDrought, isLocked, hovered]);
 
   // Generates 24 wheat plants in 4 furrow rows across the larger field
   const stems = useMemo(() => {
@@ -54,7 +56,24 @@ function PlotField({ plot, position, weather, reducedMotion }) {
   }, [hasCrop]);
 
   return (
-    <group position={position}>
+    <group
+      position={position}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onPlotClick) onPlotClick(plot);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        if (!isLocked) {
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }
+      }}
+      onPointerOut={() => {
+        setHovered(false);
+        document.body.style.cursor = "default";
+      }}
+    >
       {/* Raised Blocky Farmland Bed (Minecraft Farmland Slab: 2.8 x 0.2 x 2.2) */}
       <mesh position={[0, 0.1, 0]} receiveShadow castShadow>
         <boxGeometry args={[2.8, 0.2, 2.2]} />
@@ -216,6 +235,7 @@ export function Terrain({
   weather = "clear",
   isPumpRunning = false,
   reducedMotion = false,
+  onPlotClick,
 }) {
   const waterRef = useRef();
   const isRaining = weather === "rain";
@@ -328,6 +348,7 @@ export function Terrain({
           position={plotPositions[i] || [0, 0, 0]}
           weather={weather}
           reducedMotion={reducedMotion}
+          onPlotClick={onPlotClick}
         />
       ))}
 
