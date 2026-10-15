@@ -97,6 +97,10 @@ export default function FarmScene({
   const matureCropsCount = plots.filter((p) => p.crop && p.growth >= 2).length;
   const farmHealth = Math.min(100, 20 + activeCropsCount * 15 + matureCropsCount * 15 + trust * 4);
 
+  // Reliable sunset/night detector (supporting numbers 0..23 or strings "19:00")
+  const numericHour = typeof time === "number" ? time : parseInt(String(time), 10) || 8;
+  const isSunsetOrNight = numericHour >= 17 || numericHour < 6;
+
   // Local state for 3D In-World Chat HUD
   const [inputVal, setInputVal] = useState("");
   const [showHistory, setShowHistory] = useState(false);
@@ -326,7 +330,7 @@ export default function FarmScene({
               onFootstep={onFootstep}
               joystickInput={joystickInput}
               enabled={true}
-              isSunsetOrNight={time >= 17 || time < 6}
+              isSunsetOrNight={isSunsetOrNight}
             />
           </Canvas>
 

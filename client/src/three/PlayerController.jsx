@@ -225,11 +225,12 @@ export function PlayerController({
 
     // Torch flame and light flicker animation during sunset or night
     if (isSunsetOrNight && torchLightRef.current) {
-      const flicker = Math.sin(delta * 25 + pos.current.x) * 0.15 + Math.cos(delta * 18 + pos.current.z) * 0.1;
-      torchLightRef.current.intensity = 1.8 + flicker;
+      const time = _.clock?.elapsedTime || 0;
+      const flicker = Math.sin(time * 12 + pos.current.x) * 0.25 + Math.cos(time * 17 + pos.current.z) * 0.15;
+      torchLightRef.current.intensity = 2.4 + flicker;
       if (torchFlameRef.current) {
-        const scaleFlicker = 1 + Math.sin(delta * 30) * 0.12;
-        torchFlameRef.current.scale.set(scaleFlicker, scaleFlicker * 1.1, scaleFlicker);
+        const scaleFlicker = 1 + Math.sin(time * 14) * 0.15;
+        torchFlameRef.current.scale.set(scaleFlicker, scaleFlicker * 1.15, scaleFlicker);
       }
     }
 
@@ -302,59 +303,64 @@ export function PlayerController({
           <meshStandardMaterial color="#0e7490" roughness={0.8} flatShading />
         </mesh>
 
-        {/* Right Arm & Hand (raised slightly when holding torch at sunset/night) */}
+        {/* Right Arm & Hand (extended forward to proudly hold lit torch at sunset/night) */}
         <group position={[0.26, 0.65, 0]}>
           <mesh
-            position={[0, isSunsetOrNight ? -0.04 : 0, isSunsetOrNight ? 0.08 : 0]}
-            rotation={[isSunsetOrNight ? -0.65 : 0, 0, 0]}
+            position={[0, isSunsetOrNight ? 0.04 : 0, isSunsetOrNight ? 0.14 : 0]}
+            rotation={[isSunsetOrNight ? -0.85 : 0, 0, isSunsetOrNight ? 0.15 : 0]}
             castShadow
           >
-            <boxGeometry args={[0.1, 0.34, 0.12]} />
+            <boxGeometry args={[0.1, 0.36, 0.12]} />
             <meshStandardMaterial color="#0e7490" roughness={0.8} flatShading />
           </mesh>
 
           {/* Minecraft / Low-Poly Wooden Hand Torch */}
           {isSunsetOrNight && (
-            <group position={[0.02, 0.08, 0.28]} rotation={[-0.3, 0, 0.1]}>
+            <group position={[0.04, 0.16, 0.34]} rotation={[-0.2, 0, 0.08]}>
               {/* Torch Wood Handle Stick */}
-              <mesh position={[0, -0.15, 0]} castShadow>
-                <boxGeometry args={[0.06, 0.42, 0.06]} />
-                <meshStandardMaterial color="#451a03" roughness={0.9} flatShading />
+              <mesh position={[0, -0.1, 0]} castShadow>
+                <boxGeometry args={[0.08, 0.52, 0.08]} />
+                <meshStandardMaterial color="#5c2c16" roughness={0.9} flatShading />
               </mesh>
 
               {/* Charcoal / Burnt Wick Top */}
-              <mesh position={[0, 0.08, 0]} castShadow>
-                <boxGeometry args={[0.07, 0.08, 0.07]} />
+              <mesh position={[0, 0.17, 0]} castShadow>
+                <boxGeometry args={[0.09, 0.09, 0.09]} />
                 <meshStandardMaterial color="#1c1917" roughness={0.9} />
               </mesh>
 
               {/* Stylized Glowing Flame Mesh */}
-              <group ref={torchFlameRef} position={[0, 0.16, 0]}>
+              <group ref={torchFlameRef} position={[0, 0.28, 0]}>
                 {/* Inner Core Flame (Bright Yellow) */}
                 <mesh>
-                  <boxGeometry args={[0.08, 0.12, 0.08]} />
+                  <boxGeometry args={[0.12, 0.18, 0.12]} />
                   <meshBasicMaterial color="#fef08a" />
                 </mesh>
                 {/* Outer Flame (Warm Orange) */}
                 <mesh position={[0, 0.03, 0]}>
-                  <boxGeometry args={[0.11, 0.15, 0.11]} />
+                  <boxGeometry args={[0.16, 0.22, 0.16]} />
                   <meshStandardMaterial
                     color="#f97316"
                     emissive="#ea580c"
-                    emissiveIntensity={1.8}
+                    emissiveIntensity={2.5}
                     transparent
-                    opacity={0.85}
+                    opacity={0.88}
                   />
+                </mesh>
+                {/* Outer Ambient Glow Aura */}
+                <mesh position={[0, 0.05, 0]}>
+                  <boxGeometry args={[0.22, 0.28, 0.22]} />
+                  <meshBasicMaterial color="#fb923c" transparent opacity={0.25} />
                 </mesh>
               </group>
 
               {/* Dynamic Point Light casting warm radiant glow onto surroundings */}
               <pointLight
                 ref={torchLightRef}
-                position={[0, 0.25, 0]}
+                position={[0, 0.35, 0]}
                 color="#f59e0b"
-                intensity={2.2}
-                distance={11}
+                intensity={3.2}
+                distance={14}
                 decay={2}
                 castShadow
                 shadow-bias={-0.002}
