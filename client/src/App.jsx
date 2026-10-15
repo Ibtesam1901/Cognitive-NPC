@@ -40,6 +40,7 @@ import { KitchenModal } from "./components/KitchenModal.jsx";
 import { SalimChatModal } from "./components/SalimChatModal.jsx";
 import { loadGameState, saveGameState, clearGameSave } from "./utils/gameState.js";
 import { audioManager } from "./utils/audioManager.js";
+import { chatWithNpc } from "./services/npcApi.js";
 import FarmScene from "./three/FarmScene.jsx";
 import "./App.css";
 
@@ -73,6 +74,7 @@ export default function App() {
   const [activeStory, setActiveStory] = useState(null);
   const [toast, setToast] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem("raghu_theme") || "light");
+  const [currentLanguage, setCurrentLanguage] = useState(() => localStorage.getItem("raghu_language") || "en");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -205,10 +207,11 @@ export default function App() {
     }
   }, [npcState?.time, npcState?.weather]);
 
-  // 2. Send Chat Message to Raghu
-  const handleSendMessage = async (text) => {
+  // 2. Send Chat Message to Raghu via Flask AI Backend (with Node Engine synchronization)
+  const handleSendMessage = async (text, lang) => {
     if (!text || isThinking) return;
 
+    const selectedLanguage = lang || currentLanguage || "en";
     sound.playPop();
 
     // Optimistically append player's message
@@ -217,6 +220,27 @@ export default function App() {
     setIsThinking(true);
 
     try {
+      // 1. First attempt to call the Flask AI Backend (http://127.0.0.1:5000)
+      let flaskResponse = null;
+      try {
+        flaskResponse = await chatWithNpc({
+          message: text,
+          language: selectedLanguage,
+          context: {
+            time: npcState?.time ?? 8,
+            weather: npcState?.weather || "clear",
+            trust: npcState?.npc?.trust ?? 0,
+            plots: npcState?.plots || [],
+            inventory: npcState?.inventory || {},
+            quests: npcState?.quests || [],
+          },
+          history: updatedMessages.slice(-6),
+        });
+      } catch (flaskErr) {
+        console.warn("Flask backend unavailable, using Node game engine:", flaskErr.message);
+      }
+
+      // 2. Call the server game engine turn to mutate verified game state
       const res = await fetch(`${API}/api/npc/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -230,25 +254,62 @@ export default function App() {
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
 
       const data = await res.json();
-
       setNpcState(data.state);
+
+      // Use the multilingual response from Flask if available, else Node reply
+      const finalReply = flaskResponse?.reply || data.reply;
+      const finalEmotion = flaskResponse?.emotion || data.emotion || "neutral";
 
       // Append Raghu's reply
       setMessages((prev) => [
         ...prev,
         {
           role: "raghu",
-          text: data.reply,
-          emotion: data.emotion,
+          text: finalReply,
+          emotion: finalEmotion,
+          language: selectedLanguage,
         },
       ]);
 
       // Play Voice if enabled
       if (voiceEnabled) {
-        playVoice(data.reply, "English");
+        const langVoiceLabel = selectedLanguage === "kn" ? "Kannada" : selectedLanguage === "hi" ? "Hindi" : "English";
+        playVoice(flaskResponse?.voice_text || finalReply, langVoiceLabel);
       }
 
-      // Log applied and rejected actions
+      // Handle validated actions returned from Flask (START_QUEST, WATER_CROP, UNLOCK_LAND, etc.)
+      if (flaskResponse && Array.isArray(flaskResponse.actions)) {
+        for (const action of flaskResponse.actions) {
+          if (!action || !action.type) continue;
+          const { type, parameters = {} } = action;
+
+          // Safe execution of verified supported game engine actions
+          if (type === "UNLOCK_LAND" || type === "UNLOCK_PLOT") {
+            const plotToUnlock = parameters.plot_id || (npcState.plots.find(p => p.locked)?.id);
+            if (plotToUnlock && (npcState?.npc?.trust ?? 0) >= 2) {
+              handleFarmAction("UNLOCK_PLOT", { plotId: plotToUnlock });
+            }
+          } else if (type === "WATER_CROP") {
+            const plotId = parameters.plot_id || 1;
+            handleFarmAction("WATER", { plotId });
+          } else if (type === "HARVEST_CROP") {
+            const plotId = parameters.plot_id || 1;
+            handleFarmAction("HARVEST", { plotId });
+          } else if (type === "PLANT_CROP") {
+            const plotId = parameters.plot_id || 1;
+            const crop = parameters.crop || "wheat";
+            handleFarmAction("PLANT", { plotId, crop });
+          } else if (type === "OPEN_MARKET") {
+            setShowMarket(true);
+          } else if (type === "REPAIR_IRRIGATION") {
+            handleFarmAction("REPAIR_PUMP");
+          } else if (type === "SHOW_HINT") {
+            showToast(parameters.hint || "Tend to your crops with fresh water before noon.", "info");
+          }
+        }
+      }
+
+      // Log applied and rejected actions from Node engine
       const newLogs = [];
       if (Array.isArray(data.applied)) {
         for (const app of data.applied) {
@@ -577,6 +638,11 @@ export default function App() {
                 onSendMessage={handleSendMessage}
                 voiceEnabled={voiceEnabled}
                 onToggleVoice={() => setVoiceEnabled((v) => !v)}
+                language={currentLanguage}
+                onLanguageChange={(lang) => {
+                  setCurrentLanguage(lang);
+                  localStorage.setItem("raghu_language", lang);
+                }}
                 onOpenMarket={() => setShowMarket(true)}
                 onOpenKitchen={() => setShowKitchen(true)}
                 onOpenSalimChat={() => setShowSalimChat(true)}

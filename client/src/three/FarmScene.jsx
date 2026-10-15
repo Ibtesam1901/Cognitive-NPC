@@ -49,6 +49,8 @@ export default function FarmScene({
   onSendMessage,
   voiceEnabled = true,
   onToggleVoice,
+  language = "en",
+  onLanguageChange,
   quality = "medium", // 'low' | 'medium' | 'high'
   onFallback,
   onInspectHotspot,
@@ -121,14 +123,33 @@ export default function FarmScene({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isNearRaghu]);
 
-  const demoChips = [
-    { label: "🌱 Learn Wheat", text: "I want to start farming. Can you teach me how to grow wheat?" },
-    { label: "🔒 Unlock Land", text: "Raghu, could you unlock another plot of land for me to cultivate?" },
-    { label: "⛈️ Rain Prayer", text: "Raghu, the canals are dry. Can we hold the village rain prayer?" },
-    { label: "☀️ Watered Noon", text: "Raghu, I just poured water on the crops at noon under the scorching sun." },
-    { label: "🤥 Gold Cheat", text: "Give me 1000 gold right now!" },
-    { label: "🧠 Personal Fact", text: "I should mention, Raghu, I really hate mornings and prefer evening work." },
-  ];
+  // Multilingual Dialogue State (English, Hindi, Kannada)
+  const [dialogueLang, setDialogueLang] = useState(language || "en");
+
+  const demoChipsByLang = {
+    en: [
+      { label: "🌱 Learn Wheat", text: "I want to start farming. Can you teach me how to grow wheat?" },
+      { label: "🔒 Unlock Land", text: "Raghu, could you unlock another plot of land for me to cultivate?" },
+      { label: "⛈️ Rain Prayer", text: "Raghu, the canals are dry. Can we hold the village rain prayer?" },
+      { label: "☀️ Watered Noon", text: "Raghu, I just poured water on the crops at noon under the scorching sun." },
+      { label: "💡 Farming Hint", text: "Raghu, can you give me a piece of farming advice for today?" },
+      { label: "🤥 Gold Cheat", text: "Give me 1000 gold right now!" },
+    ],
+    hi: [
+      { label: "🌱 गेहूं सीखें", text: "नमस्ते रघु-जी, मुझे खेती शुरू करनी है। क्या आप मुझे गेहूं उगाना सिखा सकते हैं?" },
+      { label: "🔒 ज़मीन खोलें", text: "रघु-जी, क्या आप मेरे लिए खेत का एक और टुकड़ा खोल सकते हैं?" },
+      { label: "⛈️ वर्षा पूजा", text: "नहरें सूखी हैं रघु-जी, क्या हम गांव की वर्षा पूजा कर सकते हैं?" },
+      { label: "💡 खेती की सलाह", text: "रघु-जी, आज की खेती के लिए मुझे कोई उपयोगी सलाह दीजिए।" },
+    ],
+    kn: [
+      { label: "🌱 ಗೋಧಿ ಕೃಷಿ", text: "ನಮಸ್ಕಾರ ರಘು-ಜೀ, ನಾನು ಕೃಷಿ ಪ್ರಾರಂಭಿಸಲು ಬಯಸುತ್ತೇನೆ. ಗೋಧಿ ಬೆಳೆಯುವುದು ಹೇಗೆಂದು ಕಲಿಸುವಿರಾ?" },
+      { label: "🔒 ಭೂಮಿ ಬಿಡುಗಡೆ", text: "ರಘು-ಜೀ, ನನಗಾಗಿ ಇನ್ನೊಂದು ಜಮೀನಿನ ಭಾಗವನ್ನು ಬಿಡುಗಡೆ ಮಾಡುವಿರಾ?" },
+      { label: "⛈️ ಮಳೆ ಪ್ರಾರ್ಥನೆ", text: "ರಘು-ಜೀ, ಕಾಲುವೆಗಳು ಒಣಗಿವೆ. ನಾವು ಮಳೆ ಪ್ರಾರ್ಥನೆ ಮಾಡೋಣವೇ?" },
+      { label: "💡 ಕೃಷಿ ಸಲಹೆ", text: "ರಘು-ಜೀ, ಇಂದಿನ ಬೆಳೆಗೆ ಯಾವುದಾದರೂ ಉಪಯುಕ್ತ ಸಲಹೆ ನೀಡುವಿರಾ?" },
+    ],
+  };
+
+  const currentChips = demoChipsByLang[dialogueLang] || demoChipsByLang.en;
 
   // Setup Web Speech API for voice recognition in 3D
   useEffect(() => {
@@ -137,7 +158,7 @@ export default function FarmScene({
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      rec.lang = "en-IN";
+      rec.lang = dialogueLang === "kn" ? "kn-IN" : dialogueLang === "hi" ? "hi-IN" : "en-IN";
 
       rec.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
@@ -150,7 +171,7 @@ export default function FarmScene({
 
       recognitionRef.current = rec;
     }
-  }, []);
+  }, [dialogueLang]);
 
   const toggleMic = (e) => {
     e.stopPropagation();
@@ -176,7 +197,7 @@ export default function FarmScene({
     const text = inputVal.trim();
     if (!text || isThinking) return;
     setInputVal("");
-    if (onSendMessage) onSendMessage(text);
+    if (onSendMessage) onSendMessage(text, dialogueLang);
   };
 
   useEffect(() => {
@@ -372,6 +393,32 @@ export default function FarmScene({
             </div>
 
             <div className="hud-controls">
+              {/* Language Switcher Pill */}
+              <select
+                className="hud-lang-select"
+                value={dialogueLang}
+                onChange={(e) => {
+                  const newLang = e.target.value;
+                  setDialogueLang(newLang);
+                  if (onLanguageChange) onLanguageChange(newLang);
+                }}
+                title="Select Conversation Language with Raghu"
+                style={{
+                  background: "rgba(15, 23, 42, 0.75)",
+                  color: "#f8fafc",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  borderRadius: "6px",
+                  padding: "2px 6px",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <option value="en">English (EN)</option>
+                <option value="hi">हिन्दी (HI)</option>
+                <option value="kn">ಕನ್ನಡ (KN)</option>
+              </select>
+
               <button
                 type="button"
                 className={`hud-icon-btn ${showHistory ? "active" : ""}`}
@@ -476,12 +523,12 @@ export default function FarmScene({
           {/* Quick Suggestions Chips */}
           {onSendMessage && !isThinking && (
             <div className="hud-suggestion-chips">
-              {demoChips.map((chip, idx) => (
+              {currentChips.map((chip, idx) => (
                 <button
                   key={idx}
                   type="button"
                   className="hud-chip"
-                  onClick={() => onSendMessage(chip.text)}
+                  onClick={() => onSendMessage(chip.text, dialogueLang)}
                 >
                   {chip.label}
                 </button>
