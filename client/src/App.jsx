@@ -64,6 +64,7 @@ export default function App() {
     },
   ]);
   const [isThinking, setIsThinking] = useState(false);
+  const [isSpeakingRaghu, setIsSpeakingRaghu] = useState(false);
   const [isActing, setIsActing] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [actionLog, setActionLog] = useState([]);
@@ -247,6 +248,7 @@ export default function App() {
         body: JSON.stringify({
           sessionId,
           message: text,
+          language: selectedLanguage,
           config: llmConfig.apiKey ? llmConfig : undefined,
         }),
       });
@@ -274,7 +276,10 @@ export default function App() {
       // Play Voice if enabled
       if (voiceEnabled) {
         const langVoiceLabel = selectedLanguage === "kn" ? "Kannada" : selectedLanguage === "hi" ? "Hindi" : "English";
-        playVoice(flaskResponse?.voice_text || finalReply, langVoiceLabel);
+        playVoice(flaskResponse?.voice_text || finalReply, langVoiceLabel, {
+          onStart: () => setIsSpeakingRaghu(true),
+          onEnd: () => setIsSpeakingRaghu(false),
+        });
       }
 
       // Handle validated actions returned from Flask (START_QUEST, WATER_CROP, UNLOCK_LAND, etc.)
@@ -632,7 +637,7 @@ export default function App() {
                 quests={npcState?.quests || []}
                 inventory={npcState?.inventory || {}}
                 flags={npcState?.flags || {}}
-                isSpeaking={isThinking}
+                isSpeaking={isSpeakingRaghu}
                 messages={messages}
                 isThinking={isThinking}
                 onSendMessage={handleSendMessage}

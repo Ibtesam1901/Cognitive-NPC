@@ -6,11 +6,20 @@
 import { SYSTEM_PROMPT } from "./systemPrompt.js";
 import { promptSummary } from "./gameEngine.js";
 
-export function buildMessages(state, playerMessage) {
+export function buildMessages(state, playerMessage, language = "en") {
   const s = state;
   const ps = promptSummary(s);
 
+  const langNote =
+    language === "kn"
+      ? "CRITICAL LANGUAGE REQUIREMENT: You MUST reply entirely in natural, spoken KANNADA (ಕನ್ನಡ) script. Use authentic rural Karnataka village expressions ('ಮಗನೇ', 'ಭೂತಾಯಿ', 'ಹೊಲ'). Never reply in English or Hindi."
+      : language === "hi"
+      ? "CRITICAL LANGUAGE REQUIREMENT: You MUST reply entirely in natural, earthy rural HINDI (हिन्दी) Devanagari script. Use authentic Indian village expressions ('बेटा', 'अरे', 'धरती मैया', 'पसीना'). Never reply in English."
+      : "CRITICAL LANGUAGE REQUIREMENT: Reply in natural spoken rural Indian English with warm colloquialisms ('beta', 'arre').";
+
   const context = `
+${langNote}
+
 # WORLD STATE
 Day: ${s.day} | Time: ${ps.time} | Weather: ${s.weather} | Gold: ${s.gold} | Wheat price: ${ps.wheatPrice}
 Plots: ${ps.plots}

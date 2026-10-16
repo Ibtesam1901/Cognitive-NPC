@@ -9,6 +9,7 @@ import * as THREE from "three";
  */
 export function BarnAndLakshmi({
   position = [4.8, 0, 1.2],
+  isCowFound = true,
   reducedMotion = false,
   onCowClick,
 }) {
@@ -95,25 +96,26 @@ export function BarnAndLakshmi({
         </mesh>
       </group>
 
-      {/* Lakshmi the Cow (Indian Zebu sacred farm cow) */}
-      <group
-        position={[0, 0.55, 0]}
-        rotation={[0, Math.PI / 2, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (onCowClick) onCowClick();
-        }}
-        cursor="pointer"
-      >
-        {/* Main Cow Body (Barrel) */}
-        <mesh position={[0, 0.45, 0]} castShadow material={materials.cowWhite}>
-          <boxGeometry args={[1.3, 0.75, 0.65]} />
-        </mesh>
+      {/* Lakshmi the Cow (Indian Zebu sacred farm cow) or Missing Stall state */}
+      {isCowFound ? (
+        <group
+          position={[0, 0.55, 0]}
+          rotation={[0, Math.PI / 2, 0]}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onCowClick) onCowClick();
+          }}
+          cursor="pointer"
+        >
+          {/* Main Cow Body (Barrel) */}
+          <mesh position={[0, 0.45, 0]} castShadow material={materials.cowWhite}>
+            <boxGeometry args={[1.3, 0.75, 0.65]} />
+          </mesh>
 
-        {/* Brown spot on flank */}
-        <mesh position={[0.15, 0.55, 0.33]} material={materials.cowBrown}>
-          <boxGeometry args={[0.5, 0.4, 0.02]} />
-        </mesh>
+          {/* Brown spot on flank */}
+          <mesh position={[0.15, 0.55, 0.33]} material={materials.cowBrown}>
+            <boxGeometry args={[0.5, 0.4, 0.02]} />
+          </mesh>
           <mesh position={[-0.2, 0.4, -0.33]} material={materials.cowBrown}>
             <boxGeometry args={[0.45, 0.35, 0.02]} />
           </mesh>
@@ -181,6 +183,14 @@ export function BarnAndLakshmi({
             </mesh>
           </group>
         </group>
+      ) : (
+        /* Empty Stall: Slack halter rope coiled on the ground */
+        <group position={[0.5, 0.05, 0.2]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} material={materials.rope}>
+            <torusGeometry args={[0.25, 0.03, 4, 8]} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }

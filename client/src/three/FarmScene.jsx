@@ -126,6 +126,10 @@ export default function FarmScene({
   // Multilingual Dialogue State (English, Hindi, Kannada)
   const [dialogueLang, setDialogueLang] = useState(language || "en");
 
+  useEffect(() => {
+    if (language) setDialogueLang(language);
+  }, [language]);
+
   const demoChipsByLang = {
     en: [
       { label: "🌱 Learn Wheat", text: "I want to start farming. Can you teach me how to grow wheat?" },
@@ -153,39 +157,134 @@ export default function FarmScene({
 
   // Setup Web Speech API for voice recognition in 3D
   useEffect(() => {
-    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof window === "undefined") return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+
       const rec = new SpeechRecognition();
       rec.continuous = false;
-      rec.interimResults = false;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
       rec.lang = dialogueLang === "kn" ? "kn-IN" : dialogueLang === "hi" ? "hi-IN" : "en-IN";
 
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
       rec.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInputVal(transcript);
+        let interimTranscript = "";
+        let finalTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const res = event.results[i];
+          if (res.isFinal) {
+            finalTranscript += res[0].transcript;
+          } else {
+            interimTranscript += res[0].transcript;
+          }
+        }
+
+        const text = (finalTranscript || interimTranscript).trim();
+        if (text) {
+          setInputVal(text);
+        }
+      };
+
+      rec.onerror = (event) => {
+        console.warn("[Voice Input] Speech recognition event:", event.error);
+        if (event.error === "no-speech") {
+          setIsListening(false);
+          return;
+        }
+        if (event.error === "aborted") {
+          setIsListening(false);
+          return;
+        }
+        setIsListening(false);
+        if (event.error === "not-allowed" || event.error === "permission-denied") {
+          alert("Microphone access is blocked. Please click the site icon in your browser address bar and enable 'Microphone'.");
+        }
+      };
+
+      rec.onend = () => {
         setIsListening(false);
       };
 
-      rec.onerror = () => setIsListening(false);
-      rec.onend = () => setIsListening(false);
-
       recognitionRef.current = rec;
+    } catch (err) {
+      console.warn("[Voice Input] SpeechRecognition setup warning:", err);
     }
+
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+    };
   }, [dialogueLang]);
 
-  const toggleMic = (e) => {
-    e.stopPropagation();
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser.");
+  const toggleMic = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    const SpeechRecognition = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.");
       return;
     }
+
     if (isListening) {
-      recognitionRef.current.stop();
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
       setIsListening(false);
-    } else {
+      return;
+    }
+
+    // Proactively verify / trigger mic permission if not already granted
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    } catch (micErr) {
+      console.warn("[Voice Input] Mic permission error:", micErr);
+    }
+
+    if (!recognitionRef.current) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.lang = dialogueLang === "kn" ? "kn-IN" : dialogueLang === "hi" ? "hi-IN" : "en-IN";
+      rec.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        if (transcript) setInputVal(transcript);
+      };
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
+      recognitionRef.current = rec;
+    }
+
+    try {
+      recognitionRef.current.lang = dialogueLang === "kn" ? "kn-IN" : dialogueLang === "hi" ? "hi-IN" : "en-IN";
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (startErr) {
+      console.debug("[Voice Input] Start note:", startErr?.message);
       try {
-        recognitionRef.current.start();
-        setIsListening(true);
+        recognitionRef.current.abort();
+        setTimeout(() => {
+          try {
+            recognitionRef.current.start();
+            setIsListening(true);
+          } catch {}
+        }, 150);
       } catch {
         setIsListening(false);
       }
@@ -286,6 +385,7 @@ export default function FarmScene({
             {/* Cattle Barn & Lakshmi the Cow - positioned neatly in the East paddock */}
             <BarnAndLakshmi
               position={[5.2, 0, 0.2]}
+              isCowFound={isCowFound}
               reducedMotion={reducedMotion}
               onCowClick={onFeedCow}
             />
@@ -503,7 +603,19 @@ export default function FarmScene({
               <input
                 type="text"
                 className="hud-text-input"
-                placeholder="Speak or type to Raghu directly..."
+                placeholder={
+                  isListening
+                    ? dialogueLang === "kn"
+                      ? "ಧ್ವನಿಯನ್ನು ಆಲಿಸಲಾಗುತ್ತಿದೆ... ಮಾತನಾಡಿ..."
+                      : dialogueLang === "hi"
+                      ? "आपकी आवाज़ सुनी जा रही है... बोलिए..."
+                      : "Listening to your voice... Speak now..."
+                    : dialogueLang === "kn"
+                    ? "ರಘು ಅವರೊಂದಿಗೆ ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ..."
+                    : dialogueLang === "hi"
+                    ? "रघु से हिन्दी में बात करें या लिखें..."
+                    : "Speak or type to Raghu directly..."
+                }
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 disabled={isThinking}

@@ -38,12 +38,12 @@ app.get("/api/npc/state", (req, res) => {
 });
 
 app.post("/api/npc/chat", async (req, res) => {
-  const { sessionId, message, config } = req.body || {};
+  const { sessionId, message, config, language = "en" } = req.body || {};
   if (!sessionId || typeof message !== "string" || !message.trim()) {
     return res.status(400).json({ error: "sessionId and message required" });
   }
 
-  const result = await handleTurn(sessionId, message.trim().slice(0, 500), config);
+  const result = await handleTurn(sessionId, message.trim().slice(0, 500), config, language);
   res.json(result);
 });
 
@@ -97,9 +97,50 @@ app.post("/api/npc/reset", (req, res) => {
 const sessions = new Map(); // sessionId -> game state
 const sessionConfigs = new Map(); // sessionId -> custom LLM config { apiKey, baseURL, model }
 
+// Persistence for legacy simulator sessions
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LEGACY_SESSIONS_FILE = path.join(__dirname, "data", "legacy_sessions.json");
+
+function loadLegacySessions() {
+  try {
+    if (fs.existsSync(LEGACY_SESSIONS_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(LEGACY_SESSIONS_FILE, "utf-8"));
+      for (const [id, s] of Object.entries(parsed)) {
+        sessions.set(id, s);
+      }
+    }
+  } catch (err) {
+    console.warn("[SessionStore] Failed reading legacy sessions:", err.message);
+  }
+}
+loadLegacySessions();
+
+let legacySaveTimer = null;
+function saveLegacySessions() {
+  if (legacySaveTimer) clearTimeout(legacySaveTimer);
+  legacySaveTimer = setTimeout(() => {
+    try {
+      const obj = {};
+      for (const [id, s] of sessions.entries()) {
+        obj[id] = s;
+      }
+      fs.writeFileSync(LEGACY_SESSIONS_FILE, JSON.stringify(obj, null, 2), "utf-8");
+    } catch (err) {
+      console.warn("[SessionStore] Failed writing legacy sessions:", err.message);
+    }
+  }, 400);
+}
+
 const getState = (id) => {
   if (!id) id = "default";
-  if (!sessions.has(id)) sessions.set(id, newState());
+  if (!sessions.has(id)) {
+    sessions.set(id, newState());
+    saveLegacySessions();
+  }
   return sessions.get(id);
 };
 
@@ -193,6 +234,7 @@ app.post("/api/chat", async (req, res) => {
     );
 
     await maybeSummarize(state, activeConfig);
+    saveLegacySessions();
 
     // [INSPECTOR START]
     const stateAfter = {

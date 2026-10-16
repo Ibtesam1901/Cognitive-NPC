@@ -11,14 +11,14 @@ import { fallbackBrain } from "./fallbackBrain.js";
 import { applyNpcTurn, foldSummary } from "./gameEngine.js";
 import { summarizeConversation } from "./summarizer.js";
 
-export async function handleTurn(sessionId, message, config = {}) {
+export async function handleTurn(sessionId, message, config = {}, language = "en") {
   const state = load(sessionId);
   let rawOut = null;
   let usedFallback = false;
 
   // 1. Try LLM call with 12 s timeout and one retry on bad JSON
   try {
-    const messages = buildMessages(state, message);
+    const messages = buildMessages(state, message, language);
     let raw = await callLLM(messages, config, 12000);
     try {
       rawOut = JSON.parse(raw);
@@ -30,7 +30,7 @@ export async function handleTurn(sessionId, message, config = {}) {
   } catch (err) {
     console.log("[NPC] Using fallback brain due to:", err.message);
     usedFallback = true;
-    rawOut = fallbackBrain(state, message);
+    rawOut = fallbackBrain(state, message, language);
   }
 
   // 2. Run through the engine (validates actions, advances quests, caps trust)

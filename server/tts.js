@@ -51,11 +51,15 @@ function getCacheKey(provider, language, text) {
  * Synthesize speech with Google Cloud Text-to-Speech API
  */
 async function synthesizeGoogleTTS(text, language, apiKey) {
-  const isHindi = language === "Hindi" || language === "Hinglish";
+  const normLang = String(language || "").toLowerCase();
+  const isKannada = normLang === "kannada" || normLang === "kn" || /[\u0C80-\u0CFF]/.test(text);
+  const isHindi = normLang === "hindi" || normLang === "hinglish" || normLang === "hi" || /[\u0900-\u097F]/.test(text);
 
-  // Voices suited to a 62-year-old Indian man: en-IN for English, hi-IN for Hindi/Hinglish
-  const languageCode = isHindi ? "hi-IN" : "en-IN";
-  const voiceName = isHindi
+  // Voices suited to a 62-year-old Indian man: kn-IN for Kannada, hi-IN for Hindi, en-IN for English
+  const languageCode = isKannada ? "kn-IN" : isHindi ? "hi-IN" : "en-IN";
+  const voiceName = isKannada
+    ? process.env.GOOGLE_TTS_VOICE_KN || "kn-IN-Wavenet-A"
+    : isHindi
     ? process.env.GOOGLE_TTS_VOICE_HI || "hi-IN-Wavenet-B"
     : process.env.GOOGLE_TTS_VOICE_EN || "en-IN-Wavenet-B";
 
@@ -93,6 +97,80 @@ async function synthesizeGoogleTTS(text, language, apiKey) {
   }
 
   return Buffer.from(data.audioContent, "base64");
+}
+
+/**
+ * Microsoft Edge Natural Neural Voices (Male)
+ * Kannada: kn-IN-GaganNeural (Male)
+ * Hindi:   hi-IN-MadhurNeural (Male)
+ * English: en-IN-PrabhatNeural (Male)
+ */
+async function synthesizeEdgeNeuralTTS(text, language) {
+  const normLang = String(language || "").toLowerCase();
+  const isKannada = normLang === "kannada" || normLang === "kn" || /[\u0C80-\u0CFF]/.test(text);
+  const isHindi = normLang === "hindi" || normLang === "hinglish" || normLang === "hi" || /[\u0900-\u097F]/.test(text);
+
+  const maleVoice = isKannada
+    ? "kn-IN-GaganNeural"
+    : isHindi
+    ? "hi-IN-MadhurNeural"
+    : "en-IN-PrabhatNeural";
+
+  const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
+  const tts = new MsEdgeTTS();
+  await tts.setMetadata(maleVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+
+  return new Promise((resolve, reject) => {
+    try {
+      const { audioStream } = tts.toStream(text, {
+        pitch: "-5Hz",
+        rate: "-10%",
+      });
+
+      const chunks = [];
+      const timer = setTimeout(() => {
+        reject(new Error("Edge TTS stream timeout"));
+      }, 10000);
+
+      audioStream.on("data", (chunk) => chunks.push(chunk));
+      audioStream.on("end", () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
+      });
+      audioStream.on("error", (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
+ * Universal fallback voice stream for multi-language speech
+ */
+async function synthesizeGoogleStreamTTS(text, language) {
+  const normLang = String(language || "").toLowerCase();
+  const isKannada = normLang === "kannada" || normLang === "kn" || /[\u0C80-\u0CFF]/.test(text);
+  const isHindi = normLang === "hindi" || normLang === "hinglish" || normLang === "hi" || /[\u0900-\u097F]/.test(text);
+
+  const langCode = isKannada ? "kn" : isHindi ? "hi" : "en-IN";
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${encodeURIComponent(langCode)}&client=tw-ob&q=${encodeURIComponent(text)}`;
+
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google stream TTS error HTTP ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }
 
 /**
@@ -151,13 +229,8 @@ export async function handleTTS(req, res) {
       return res.status(204).end();
     }
 
-    const provider = (process.env.TTS_PROVIDER || "none").toLowerCase().trim();
+    const provider = (process.env.TTS_PROVIDER || "google-stream").toLowerCase().trim();
     const apiKey = (process.env.TTS_API_KEY || "").trim();
-
-    // If TTS_PROVIDER is unset or "none" or no API key, return 204 for silent fallback
-    if (provider === "none" || !provider || !apiKey) {
-      return res.status(204).end();
-    }
 
     const cacheKey = getCacheKey(provider, language, cleanText);
     if (cache.has(cacheKey)) {
@@ -168,13 +241,35 @@ export async function handleTTS(req, res) {
       return res.send(cached.buffer);
     }
 
+    // Provider selection: 'google' (Cloud API), 'elevenlabs', or automatic stream fallback
     let audioBuffer = null;
-    if (provider === "google") {
-      audioBuffer = await synthesizeGoogleTTS(cleanText, language, apiKey);
-    } else if (provider === "elevenlabs") {
-      audioBuffer = await synthesizeElevenLabsTTS(cleanText, language, apiKey);
+    if (provider === "google" && apiKey) {
+      try {
+        audioBuffer = await synthesizeGoogleTTS(cleanText, language, apiKey);
+      } catch (err) {
+        console.warn(`[TTS] Google Cloud TTS failed, falling back to neural stream: ${err.message}`);
+        audioBuffer = await synthesizeGoogleStreamTTS(cleanText, language);
+      }
+    } else if (provider === "elevenlabs" && apiKey) {
+      try {
+        audioBuffer = await synthesizeElevenLabsTTS(cleanText, language, apiKey);
+      } catch (err) {
+        console.warn(`[TTS] ElevenLabs failed, falling back to neural stream: ${err.message}`);
+        audioBuffer = await synthesizeGoogleStreamTTS(cleanText, language);
+      }
     } else {
-      return res.status(204).end();
+      // Default: High-fidelity natural Indian Male voice streaming (Kannada: Gagan, Hindi: Madhur, English: Prabhat)
+      try {
+        audioBuffer = await synthesizeEdgeNeuralTTS(cleanText, language);
+      } catch (edgeErr) {
+        console.warn(`[TTS] Edge Neural Male TTS failed, falling back to stream: ${edgeErr.message}`);
+        try {
+          audioBuffer = await synthesizeGoogleStreamTTS(cleanText, language);
+        } catch (streamErr) {
+          console.warn(`[TTS] Google stream TTS failed: ${streamErr.message}`);
+          return res.status(204).end();
+        }
+      }
     }
 
     if (!audioBuffer || audioBuffer.length === 0) {
@@ -206,11 +301,12 @@ export async function handleTTS(req, res) {
  * Route handler for GET /api/tts/status
  */
 export function getTTSStatus(req, res) {
-  const provider = (process.env.TTS_PROVIDER || "none").toLowerCase().trim();
+  const provider = (process.env.TTS_PROVIDER || "google-stream").toLowerCase().trim();
   const hasKey = Boolean(process.env.TTS_API_KEY && process.env.TTS_API_KEY.trim());
   res.json({
     provider,
-    configured: provider !== "none" && hasKey,
-    active: provider !== "none" && hasKey ? provider : "browser",
+    configured: true,
+    active: provider === "google" && hasKey ? "google-cloud" : provider === "elevenlabs" && hasKey ? "elevenlabs" : "stream-neural",
+    languages: ["en", "hi", "kn"],
   });
 }

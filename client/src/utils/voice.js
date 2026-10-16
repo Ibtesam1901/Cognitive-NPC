@@ -139,13 +139,45 @@ function fallbackSpeechSynthesis(text, language, options = {}) {
     utterance.pitch = 0.85;
 
     const voices = window.speechSynthesis.getVoices() || [];
-    if (language === "Hindi" || language === "Hinglish") {
+    const normLang = String(language || "").toLowerCase();
+    const isKannada = normLang === "kannada" || normLang === "kn" || /[\u0C80-\u0CFF]/.test(text);
+    const isHindi = normLang === "hindi" || normLang === "hinglish" || normLang === "hi" || /[\u0900-\u097F]/.test(text);
+
+    if (isKannada) {
+      const knVoice =
+        voices.find(
+          (v) =>
+            v.lang.toLowerCase().startsWith("kn") &&
+            (v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("gagan") || !v.name.toLowerCase().includes("female"))
+        ) ||
+        voices.find((v) => v.lang.toLowerCase().startsWith("kn")) ||
+        voices.find((v) => v.name.toLowerCase().includes("kannada")) ||
+        voices.find(
+          (v) =>
+            v.lang.toLowerCase().includes("en-in") &&
+            v.name.toLowerCase().includes("male")
+        ) ||
+        voices.find((v) => v.lang.toLowerCase().includes("en-in"));
+      if (knVoice) utterance.voice = knVoice;
+      utterance.lang = "kn-IN";
+    } else if (isHindi) {
       const hiVoice =
+        voices.find(
+          (v) =>
+            v.lang.toLowerCase().includes("hi") &&
+            (v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("madhur") || !v.name.toLowerCase().includes("female"))
+        ) ||
         voices.find(
           (v) =>
             v.lang.toLowerCase().includes("hi") ||
             (v.lang.toLowerCase().includes("in") && !v.lang.toLowerCase().includes("en"))
-        ) || voices.find((v) => v.lang.toLowerCase().includes("en-in"));
+        ) ||
+        voices.find((v) => v.name.toLowerCase().includes("hindi")) ||
+        voices.find(
+          (v) =>
+            v.lang.toLowerCase().includes("en-in") &&
+            v.name.toLowerCase().includes("male")
+        );
       if (hiVoice) utterance.voice = hiVoice;
       utterance.lang = "hi-IN";
     } else {
@@ -188,6 +220,9 @@ function fallbackSpeechSynthesis(text, language, options = {}) {
       onEnd?.();
     };
 
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
     window.speechSynthesis.speak(utterance);
   } catch (err) {
     console.warn("[Voice] SpeechSynthesis error, using simulation:", err);
@@ -285,6 +320,8 @@ export async function speak(text, language = "English", options = {}) {
       console.debug("[Voice] AudioContext analyser note:", audioCtxErr);
     }
 
+    audio.volume = 1.0;
+
     audio.onplay = () => {
       isSpeaking = true;
       realAudioActive = true;
@@ -300,14 +337,20 @@ export async function speak(text, language = "English", options = {}) {
       onEnd?.();
     };
 
-    audio.onerror = () => {
+    audio.onerror = (e) => {
+      console.warn("[Voice] Audio element error, falling back to speech synthesis:", e);
       stop();
       fallbackSpeechSynthesis(cleanText, language, options);
     };
 
-    await audio.play();
+    try {
+      await audio.play();
+    } catch (playErr) {
+      console.warn("[Voice] Audio autoplay blocked or failed, falling back to browser speech synthesis:", playErr);
+      fallbackSpeechSynthesis(cleanText, language, options);
+    }
   } catch (err) {
-    // Network failure, offline, or timeout -> silently fall back
+    // Network failure, offline, or timeout -> fall back
     console.debug("[Voice] Cloud TTS unavailable, using browser speech:", err?.message || err);
     fallbackSpeechSynthesis(cleanText, language, options);
   }

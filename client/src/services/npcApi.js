@@ -3,7 +3,9 @@
  * Frontend API client communicating with the Cognitive NPC Flask AI Backend (http://127.0.0.1:5000)
  */
 
-const FLASK_BASE_URL = import.meta.env.VITE_FLASK_API_URL || "http://127.0.0.1:5000";
+const FLASK_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_FLASK_API_URL) ||
+  "http://127.0.0.1:5000";
 
 /**
  * Health check to verify if the Flask AI backend is alive and configured.
@@ -48,13 +50,19 @@ export async function getNpcInfo() {
  * @param {Object} params.context - Current game state (plots, time, weather, trust, inventory, player_position)
  * @param {Array} params.history - Recent chat turns
  */
-export async function chatWithNpc({ message, text, language = "en", context = {}, history = [] }) {
+export async function chatWithNpc({ message, text, language = "en", context = {}, history = [], sessionId }) {
   const content = String(message || text || "").trim();
   if (!content) {
     throw new Error("Cannot send empty message to NPC.");
   }
 
+  const sid =
+    sessionId ||
+    (typeof localStorage !== "undefined" && localStorage.getItem("sid_raghu")) ||
+    "default_session";
+
   const payload = {
+    sessionId: sid,
     message: content,
     text: content,
     language: language || "en",
@@ -63,7 +71,7 @@ export async function chatWithNpc({ message, text, language = "en", context = {}
   };
 
   try {
-    const res = await fetch(`${FLASK_BASE_URL}/api/npc/chat`, {
+    let res = await fetch(`${FLASK_BASE_URL}/api/npc/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -72,14 +80,36 @@ export async function chatWithNpc({ message, text, language = "en", context = {}
       body: JSON.stringify(payload),
     });
 
+    // If 404, try alternative route /chat
+    if (res.status === 404) {
+      res = await fetch(`${FLASK_BASE_URL}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    }
+
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
       const errorMsg = errBody.error || `Flask backend returned HTTP ${res.status}`;
-      console.warn("Flask /api/npc/chat error response:", errBody);
+      console.warn("Flask chat error response:", errBody);
       throw new Error(errorMsg);
     }
 
-    return await res.json();
+    const data = await res.json();
+    return {
+      npc_name: data.character_name || data.npc_name || "Raghu the Elder",
+      reply: data.reply || data.message || "Namaste, beta.",
+      emotion: data.emotion || (data.intent === "greeting" ? "happy" : "neutral"),
+      language: data.language || language,
+      actions: data.actions || [],
+      voice_text: data.voice_text || data.reply || data.message,
+      dialogue_choices: data.dialogue_choices || [],
+      ...data,
+    };
   } catch (err) {
     console.error("chatWithNpc network/validation error:", err);
     throw err;

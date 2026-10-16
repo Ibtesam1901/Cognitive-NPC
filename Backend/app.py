@@ -16,16 +16,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("CognitiveNPC-Backend")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip() or None
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "openai/gpt-oss-120b").strip()
 
 openai_client = None
 if OPENAI_API_KEY and not OPENAI_API_KEY.startswith("your_openai"):
     try:
         from openai import OpenAI
-        openai_client = OpenAI(api_key=OPENAI_API_KEY)
-        logger.info("OpenAI client successfully initialized.")
+        client_kwargs = {"api_key": OPENAI_API_KEY}
+        if OPENAI_BASE_URL:
+            client_kwargs["base_url"] = OPENAI_BASE_URL
+        openai_client = OpenAI(**client_kwargs)
+        logger.info(f"AI client successfully initialized (base_url: {OPENAI_BASE_URL or 'default OpenAI'}).")
     except Exception as e:
-        logger.warning(f"Could not initialize OpenAI client: {e}")
+        logger.warning(f"Could not initialize AI client: {e}")
 
 # NPC Persona and static metadata
 NPC_INFO = {
@@ -150,8 +154,11 @@ def get_npc():
 
 # ─────────────────────────────────────────────────────────────
 # 3. POST /api/npc/chat — Process player message & generate reply
+# (Also aliased to /chat and /api/chat for universal client compatibility)
 # ─────────────────────────────────────────────────────────────
 @app.route("/api/npc/chat", methods=["POST"])
+@app.route("/chat", methods=["POST"])
+@app.route("/api/chat", methods=["POST"])
 def chat():
     # 1. Safe JSON extraction supporting both application/json and parsed form data
     if request.is_json:
@@ -246,7 +253,7 @@ def chat():
             messages=messages,
             response_format={"type": "json_object"},
             temperature=0.7,
-            max_tokens=650
+            max_tokens=1200
         )
 
         content = response.choices[0].message.content
