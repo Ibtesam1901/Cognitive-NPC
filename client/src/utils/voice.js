@@ -265,7 +265,7 @@ export async function speak(text, language = "English", options = {}) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
     const res = await fetch(`${API}/api/tts`, {
       method: "POST",
@@ -294,6 +294,7 @@ export async function speak(text, language = "English", options = {}) {
     const audio = new Audio(blobUrl);
     currentAudio = audio;
     audio.playbackRate = Math.max(0.6, Math.min(1.5, speed));
+    audio.volume = 1.0;
 
     // Connect Web Audio API AnalyserNode to drive real lip-sync animation
     try {
@@ -303,24 +304,27 @@ export async function speak(text, language = "English", options = {}) {
           currentAudioCtx = new AudioCtx();
         }
         if (currentAudioCtx.state === "suspended") {
-          await currentAudioCtx.resume().catch(() => {});
+          currentAudioCtx.resume().catch(() => {});
         }
         const analyser = currentAudioCtx.createAnalyser();
         analyser.fftSize = 128;
         analyser.smoothingTimeConstant = 0.4;
 
-        const source = currentAudioCtx.createMediaElementSource(audio);
-        source.connect(analyser);
-        analyser.connect(currentAudioCtx.destination);
+        // Try wiring MediaElementSource for visual mouth sync; if browser restricts CORS or MediaElement routing, standard audio.play() still plays sound directly
+        try {
+          const source = currentAudioCtx.createMediaElementSource(audio);
+          source.connect(analyser);
+          analyser.connect(currentAudioCtx.destination);
+          currentSourceNode = source;
+        } catch {
+          // Direct element playback handles audio output
+        }
 
         currentAnalyser = analyser;
-        currentSourceNode = source;
       }
     } catch (audioCtxErr) {
       console.debug("[Voice] AudioContext analyser note:", audioCtxErr);
     }
-
-    audio.volume = 1.0;
 
     audio.onplay = () => {
       isSpeaking = true;
