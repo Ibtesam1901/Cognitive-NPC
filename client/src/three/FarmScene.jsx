@@ -92,7 +92,8 @@ export default function FarmScene({
   );
 
   const isPumpRunning = Boolean(flags.pump_repaired);
-  const isCowFound = Boolean(flags.found_cow);
+  // Default Lakshmi to visible in her barn paddock
+  const isCowFound = flags.found_cow !== false;
 
   // Calculate overall farm health derived from live plots and trust
   const activeCropsCount = plots.filter((p) => p.crop).length;
