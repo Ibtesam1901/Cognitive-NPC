@@ -20,21 +20,21 @@ export function VillageDog({
 
   // Internal dog coordinates for smooth walking AI
   const dogPos = useRef({ x: position[0], z: position[2], rotY: Math.PI / 3 });
+  const [isNear, setIsNear] = React.useState(false);
 
-  // Calculate proximity at component render scope for JSX billboard
   const targetX = playerPos?.x ?? 0;
   const targetZ = playerPos?.z ?? 0;
-  const currentDogX = dogPos.current?.x ?? position[0];
-  const currentDogZ = dogPos.current?.z ?? position[2];
-  const distToPlayer = Math.hypot(targetX - currentDogX, targetZ - currentDogZ);
-  const isNear = distToPlayer < 2.2;
 
   useFrame((state, delta) => {
     const time = state.clock.elapsedTime;
     const dx = targetX - dogPos.current.x;
     const dz = targetZ - dogPos.current.z;
     const dist = Math.hypot(dx, dz);
-    const isClose = dist < 2.0;
+    const close = dist < 2.5;
+
+    if (close !== isNear) {
+      setIsNear(close);
+    }
 
     // Follow player if further than 2.0m, stop if closer than 1.8m
     let isMoving = false;
