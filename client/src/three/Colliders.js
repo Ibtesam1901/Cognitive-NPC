@@ -24,8 +24,8 @@ export const VILLAGE_OBSTACLES = [
   // Ancient Banyan Tree trunk (at [-6.2, 0, -7.0])
   { id: "banyan_tree", type: "cylinder", x: -6.2, z: -7.0, radius: 2.2 },
 
-  // Raghu Character Collision (at [0.2, 0, 1.6])
-  { id: "raghu_npc", type: "cylinder", x: 0.2, z: 1.6, radius: 0.65 },
+  // Raghu Character & Armchair Collision (seated on front verandah at [0.2, 0.3, 0.5])
+  { id: "raghu_npc", type: "cylinder", x: 0.2, z: 0.5, radius: 0.75 },
 
   // Village Market & Trading Post (situated on East road [9.5, 0, 0.5])
   { id: "market_stall_main", type: "box", minX: 8.0, maxX: 11.2, minZ: -1.2, maxZ: 2.2 },

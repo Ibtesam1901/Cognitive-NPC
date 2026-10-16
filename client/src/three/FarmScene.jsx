@@ -363,8 +363,9 @@ export default function FarmScene({
               isNight={time < 5 || time >= 20}
             />
 
-            {/* Low-Poly Animated Raghu Character - stood warmly at front of house steps */}
+            {/* Low-Poly Animated Raghu Character - seated in his carved armchair on the front verandah */}
             <RaghuModel
+              position={[0.2, 0.3, 0.5]}
               trust={trust}
               mood={mood}
               isSpeaking={isSpeaking}
