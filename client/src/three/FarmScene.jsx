@@ -155,79 +155,19 @@ export default function FarmScene({
 
   const currentChips = demoChipsByLang[dialogueLang] || demoChipsByLang.en;
 
-  // Setup Web Speech API for voice recognition in 3D
+  // Clean up any pending recognition on unmount
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
-
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = true;
-      rec.maxAlternatives = 1;
-      rec.lang = dialogueLang === "kn" ? "kn-IN" : dialogueLang === "hi" ? "hi-IN" : "en-IN";
-
-      rec.onstart = () => {
-        setIsListening(true);
-      };
-
-      rec.onresult = (event) => {
-        let interimTranscript = "";
-        let finalTranscript = "";
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const res = event.results[i];
-          if (res.isFinal) {
-            finalTranscript += res[0].transcript;
-          } else {
-            interimTranscript += res[0].transcript;
-          }
-        }
-
-        const text = (finalTranscript || interimTranscript).trim();
-        if (text) {
-          setInputVal(text);
-        }
-      };
-
-      rec.onerror = (event) => {
-        console.warn("[Voice Input] Speech recognition event:", event.error);
-        if (event.error === "no-speech") {
-          setIsListening(false);
-          return;
-        }
-        if (event.error === "aborted") {
-          setIsListening(false);
-          return;
-        }
-        setIsListening(false);
-        if (event.error === "not-allowed" || event.error === "permission-denied") {
-          alert("Microphone access is blocked. Please click the site icon in your browser address bar and enable 'Microphone'.");
-        }
-      };
-
-      rec.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = rec;
-    } catch (err) {
-      console.warn("[Voice Input] SpeechRecognition setup warning:", err);
-    }
-
     return () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+        recognitionRef.current = null;
       }
     };
-  }, [dialogueLang]);
+  }, []);
 
-  const toggleMic = async (e) => {
+  const toggleMic = (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -239,55 +179,65 @@ export default function FarmScene({
       return;
     }
 
+    // If currently listening, stop it
     if (isListening) {
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch {}
+        try {
+          recognitionRef.current.stop();
+        } catch {}
       }
       setIsListening(false);
       return;
     }
 
-    // Proactively verify / trigger mic permission if not already granted
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    } catch (micErr) {
-      console.warn("[Voice Input] Mic permission error:", micErr);
+    // Abort previous instance if any
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+      recognitionRef.current = null;
     }
 
-    if (!recognitionRef.current) {
+    try {
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      // Language code: kn-IN for Kannada, hi-IN for Hindi, en-IN for English
       rec.lang = dialogueLang === "kn" ? "kn-IN" : dialogueLang === "hi" ? "hi-IN" : "en-IN";
-      rec.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript;
-        if (transcript) setInputVal(transcript);
-      };
-      rec.onerror = () => setIsListening(false);
-      rec.onend = () => setIsListening(false);
-      recognitionRef.current = rec;
-    }
 
-    try {
-      recognitionRef.current.lang = dialogueLang === "kn" ? "kn-IN" : dialogueLang === "hi" ? "hi-IN" : "en-IN";
-      recognitionRef.current.start();
-      setIsListening(true);
-    } catch (startErr) {
-      console.debug("[Voice Input] Start note:", startErr?.message);
-      try {
-        recognitionRef.current.abort();
-        setTimeout(() => {
-          try {
-            recognitionRef.current.start();
-            setIsListening(true);
-          } catch {}
-        }, 150);
-      } catch {
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onresult = (event) => {
+        let transcript = "";
+        for (let i = 0; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript.trim()) {
+          setInputVal(transcript.trim());
+        }
+      };
+
+      rec.onerror = (event) => {
+        console.warn("[Voice Input] Speech recognition error:", event.error);
         setIsListening(false);
-      }
+        if (event.error === "not-allowed" || event.error === "permission-denied") {
+          alert("Microphone access is blocked. Please click the site settings/lock icon in your browser URL bar and allow Microphone.");
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+      setIsListening(true);
+    } catch (err) {
+      console.warn("[Voice Input] Could not start speech recognition:", err);
+      setIsListening(false);
     }
   };
 
